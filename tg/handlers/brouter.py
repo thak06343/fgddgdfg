@@ -1,11 +1,9 @@
 import asyncio
-
 from aiogram import Bot, F, Router
 from aiogram.types import Message, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 from aiogram.filters import BaseFilter
 from asgiref.sync import sync_to_async
-
 from .utils import find_req, pay_checker
 from ..models import TGUser, ShopOperator, OperatorClientChat, Course, Invoice, ReqUsage, Country
 from ..text import req_text

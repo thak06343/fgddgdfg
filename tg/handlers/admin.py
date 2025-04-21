@@ -1,10 +1,3 @@
-import asyncio
-from collections import defaultdict
-from idlelib.debugobj_r import remote_object_tree_item
-from tarfile import REGTYPE
-from unittest.mock import CallableMixin
-
-import aiohttp
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -12,18 +5,9 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
-from aiogram.utils.markdown import hbold, hitalic, hcode
-from django.utils import timezone
+from .utils import  get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE
+from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo
 
-from .utils import changers_current_balance, balance_val, get_totals_reqs, req_adder, create_ltc_invoice, \
-    check_invoice, create_limit_invoice, check_limit_invoice, get_ltc_usd_rate, transfer, changer_balance_with_invoices, \
-    admin_balance, transfer_to_admin, PAGE_SIZE
-from ..kb import changer_panel_bottom
-from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, ShopOperator, ReqUsage, Promo
-from ..text import main_page_text, add_new_req_text, settings_text, shop_stats_text, order_operator_text
-from django.db.models import Sum, Count, Q, FloatField
-from django.db.models.functions import Coalesce
-from datetime import datetime, date
 
 router = Router()
 
