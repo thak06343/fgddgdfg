@@ -36,7 +36,7 @@ async def shop_operator_panel():
 async def admin_panel():
     admin_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
                                         keyboard=[
-                                            [KeyboardButton(text="🐙 Главное")],
+                                            [KeyboardButton(text="🐙 Главное"), KeyboardButton(text="🔱 Инвойсы")],
                                             [KeyboardButton(text="♟ Курсы")],
                                             [KeyboardButton(text="🏵 Промо")]
                                         ])

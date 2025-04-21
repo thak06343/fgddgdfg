@@ -14,11 +14,16 @@ from .utils import promo_coder
 router = Router()
 
 class HasActiveInvoiceFilter(BaseFilter):
-    async def __call__(self, message: Message) -> bool:
-        user_id = message.from_user.id
+    async def __call__(self, msg: Message) -> bool:
+        user_id = msg.from_user.id
 
-        user = await sync_to_async(TGUser.objects.filter(user_id=user_id).first)()
+        user, created = await sync_to_async(TGUser.objects.get_or_create)(user_id=user_id)
+        user.username = msg.from_user.username
+        user.first_name = msg.from_user.first_name
+        user.last_name = msg.from_user.last_name
+        user.save()
         if not user:
+
             return False
 
         return await sync_to_async(WithdrawalMode.objects.filter(user=user, active=True).exists)()
@@ -35,7 +40,6 @@ async def send_invoice_reminder(message: Message):
 
     msg = (
         f"🧾 <b>Ваш активный счёт на оплату</b>\n\n"
-        f"💵 Сумма в USD: <b>уточняется</b>\n"
         f"🪙 Сумма в LTC: <b>{ltc_amount} LTC</b>\n\n"
         f"📬 LTC-адрес для оплаты:\n<code>{ltc_address}</code>\n"
     )

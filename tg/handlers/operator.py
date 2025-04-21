@@ -143,7 +143,7 @@ async def awaiting_cart_name(msg: Message, state: FSMContext):
         country_id = data.get("country_id")
         country = await sync_to_async(Country.objects.get)(id=country_id)
         name = msg.text.upper()
-        new_req = await sync_to_async(Req.objects.create)(user=user, name=name, active=False, cart=cart, country=country)
+        new_req = await sync_to_async(Req.objects.create)(user=user, name=name, active=False, cart=cart[0], country=country)
         await msg.answer("🎊 Кошелек добавлен!")
         await state.clear()
     except Exception as e:
@@ -423,18 +423,23 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     last_usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
+    builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
     if user.is_admin:
 
         builder.adjust(2)
     else:
         admin = await sync_to_async(TGUser.objects.filter)(is_admin=True)
         admin = admin.first()
-
+        text = (f"KZT - {invoice.amount_in_kzt}T\n"
+                f"USDT - {invoice.amount_in_usdt_for_changer}\n"
+                f"USDT(SHOP) - {invoice.amount_in_usdt}\n"
+                f"operator - {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}\n")
         try:
 
-            check_msg = await bot.send_photo(admin.user_id, last_usage.photo, reply_markup=builder.as_markup())
+            check_msg = await bot.send_photo(admin.user_id, last_usage.photo, reply_markup=builder.as_markup(), caption=text)
         except Exception as e:
-            check_msg = await bot.send_document(admin.user_id, last_usage.photo, reply_markup=builder.as_markup())
+            check_msg = await bot.send_document(admin.user_id, last_usage.photo, reply_markup=builder.as_markup(), caption=text)
         await call.answer("Информация отправлена", show_alert=True)
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{invoice.id}"))

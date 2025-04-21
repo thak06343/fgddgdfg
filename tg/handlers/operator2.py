@@ -68,8 +68,10 @@ async def shop_operator_all_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                else:
+                elif invoice.active:
                     active_not += "♻️"
+                else:
+                    active_not += "❌"
                 builder.add(InlineKeyboardButton(text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT", callback_data=f"shop_operator_invoice_{invoice.id}"))
             builder.adjust(2)
             if page_number > 1:
@@ -102,18 +104,21 @@ async def shop_operator_invoice(call: CallbackQuery):
     invoice = await sync_to_async(Invoice.objects.get)(id=data[3])
     req_usage = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
     if req_usage:
-        req_usage = req_usage.first()
-        full_name = req_usage.chat.client.first_name if req_usage.chat.client.first_name else ''
-        full_name += req_usage.chat.client.last_name if req_usage.chat.client.last_name else ''
-        if req_usage.chat.client.username:
-            user_link = f"@{req_usage.chat.client.username}"
-        else:
-            user_link = f"tg://user?id={req_usage.chat.client.user_id}"
-        date_text = timezone.now().strftime('%d.%m.%Y %H:%M')
-        text = order_operator_text.format(user_link=user_link, amount=invoice.amount_in_kzt, date=date_text, full_name=full_name)
-        builder = InlineKeyboardBuilder()
-        if req_usage.active:
-            builder.add(InlineKeyboardButton(text=f"Не получается отправить", callback_data=f"cant_send_{invoice.id}"))
-        builder.adjust(1)
-        builder.row(InlineKeyboardButton(text="< Назад", callback_data="shop_operator_all_invoices"))
-        await call.message.edit_text(text, reply_markup=builder.as_markup())
+        try:
+            req_usage = req_usage.first()
+            full_name = req_usage.chat.client.first_name if req_usage.chat.client.first_name else ' '
+            full_name += req_usage.chat.client.last_name if req_usage.chat.client.last_name else ' '
+            if req_usage.chat.client.username:
+                user_link = f"@{req_usage.chat.client.username}"
+            else:
+                user_link = f"tg://user?id={req_usage.chat.client.user_id}"
+            date_text = timezone.now().strftime('%d.%m.%Y %H:%M')
+            text = order_operator_text.format(user_link=user_link, amount=invoice.amount_in_kzt, date=date_text, full_name=full_name)
+            builder = InlineKeyboardBuilder()
+            if req_usage.active:
+                builder.add(InlineKeyboardButton(text=f"Не получается отправить", callback_data=f"cant_send_{invoice.id}"))
+            builder.adjust(1)
+            builder.row(InlineKeyboardButton(text="< Назад", callback_data="shop_operator_all_invoices"))
+            await call.message.edit_text(text, reply_markup=builder.as_markup())
+        except Exception as e:
+            print(e)

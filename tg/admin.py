@@ -18,7 +18,7 @@ class ReqAdmin(admin.ModelAdmin):
 
 @admin.register(ReqUsage)
 class ReqUsageAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'active', 'status']
 
 @admin.register(OperatorClientChat)
 class OperatorClientChatAdmin(admin.ModelAdmin):

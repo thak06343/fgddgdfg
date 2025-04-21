@@ -141,17 +141,13 @@ async def shop_statistics(msg: Message):
 
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="💳 Платежи", callback_data="all_shop_invoices"))
-    # builder.add(InlineKeyboardButton(text=f"Операторы", callback_data="all_shop_operators"))
+    builder.add(InlineKeyboardButton(text=f"Операторы", callback_data="all_shop_operators"))
     builder.adjust(1)
 
     await msg.answer(stat_text, reply_markup=builder.as_markup(), parse_mode="HTML")
 
 
-@router.callback_query(F.data == "all_shop_operators")
-async def all_shop_operators(call: CallbackQuery):
-    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
-    shop = await sync_to_async(Shop.objects.get)(boss=user)
-    operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
+
 
 @router.callback_query(F.data == "all_shop_invoices")
 async def all_shop_invoices(call: CallbackQuery):
@@ -237,7 +233,7 @@ async def shop_settings(msg: Message):
     user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
     shop = await sync_to_async(Shop.objects.get)(boss=user)
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="👨‍💻 Операторы", callback_data="my_operators"))
+    # builder.add(InlineKeyboardButton(text="👨‍💻 Операторы", callback_data="my_operators"))
     builder.add(InlineKeyboardButton(text=f"➕ Оператор", callback_data=f"add_new_shop_operator"))
 
     # operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
@@ -274,17 +270,21 @@ async def operator_manage(call: CallbackQuery):
 
 
 
-@router.callback_query(F.data == "my_operators")
+@router.callback_query(F.data == "all_shop_operators")
 async def my_operators(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop = await sync_to_async(Shop.objects.get)(boss=user)
     builder = InlineKeyboardBuilder()
     operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
     builder.row(InlineKeyboardButton(text="🔱 Все инвойсы", callback_data="business_all_invoices"))
+    text = ""
     for operator in operators:
+
+        text += (f"{operator.username if operator.username else f'{operator.first_name} {operator.last_name}'}\n"
+                 f"")
         builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_business_op_invoices_{operator.id}"))
     builder.adjust(2)
-    await call.message
+    await call.message.edit_text()
 
 @router.callback_query(F.data == "add_new_shop_operator")
 async def add_new_shop_oper(call: CallbackQuery, bot: Bot):
