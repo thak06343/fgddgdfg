@@ -126,7 +126,7 @@ async def add_new_req(call: CallbackQuery, state: FSMContext):
 @router.message(AddReqState.awaiting_cart)
 async def awaiting_cart(msg: Message, state: FSMContext):
     try:
-        cart = msg.text.split()
+        cart = msg.text.strip()
         await state.update_data(cart=cart)
         await msg.answer("Укажите имя фамилию на латинице, указанное на карте: ")
         await state.set_state(AddReqState.awaiting_name)
