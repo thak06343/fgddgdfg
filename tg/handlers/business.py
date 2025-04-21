@@ -88,6 +88,7 @@ async def awaiting_shop_tittle(msg: Message, state: FSMContext):
     user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
     new_shop, created = await sync_to_async(Shop.objects.get_or_create)(boss=user)
     new_shop.name = msg.text
+    new_shop.save()
     bottom = await shop_panel()
     await state.clear()
     await msg.answer(f"{msg.text.upper()} создан!", reply_markup=bottom)
