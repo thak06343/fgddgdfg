@@ -215,7 +215,19 @@ async def admin_show_shop(call: CallbackQuery):
     shop = await sync_to_async(Shop.objects.get)(id=data[3])
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text=f"Создать оператора для {shop.name.upper()}", callback_data=f"admin_shop_operator_promo_{shop.id}"))
-    builder.row(InlineKeyboardButton(text="", callback_data="admin_all_shops"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="admin_all_shops"))
+    builder.adjust(1)
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("admin_shop_operator_promo_"))
+async def admin_shop_operator_promo(call: CallbackQuery, bot: Bot):
+    data = call.data.split()
+    shop = await sync_to_async(Shop.objects.get)(id=data[4])
+    new_operator_promo = await sync_to_async(Promo.objects.create)(type="new_shop_operator", shop=shop)
+    bot_info = await bot.get_me()
+    bot_user = bot_info.username
+    link = f"https://t.me/{bot_user}?start={new_operator_promo.code}"
+    await call.message.answer(f"💡 `{shop.name.upper()}`\n\n`{link}`", parse_mode="Markdown")
 
 @router.callback_query(F.data == "admin_new_shop_promo")
 async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
