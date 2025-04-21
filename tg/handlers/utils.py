@@ -95,7 +95,6 @@ async def pay_checker(invoice, msg, bot, chat):
                     await sync_to_async(new_req_usage.save)()
                     changer = invoice.req.user
                     usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
-                    print(usage_reqs)
                     if not usage_reqs:
                         total_amount_val, awaiting_usdt  = await balance_val(changer)
                         val_in_usdt = total_amount_val + awaiting_usdt
@@ -192,9 +191,12 @@ async def inactivity_checker(bot):
                 reqs = await sync_to_async(Req.objects.filter)(active=True, user=user)
                 if reqs:
                     if not user.inactive_notified:
-                        await bot.send_message(chat_id=user.user_id, text="😴 Мы давно вас не видели, вы с нами?")
+                        # await bot.send_message(chat_id=user.user_id, text="😴 Мы давно вас не видели, вы с нами?")
                         user.inactive_notified = True
                         await sync_to_async(user.save)()
+                    else:
+                        result =  req_inactive(user)
+
             except Exception as e:
                 print(f"Ошибка при отправке сообщения {user.user_id}: {e}")
         await asyncio.sleep(60)

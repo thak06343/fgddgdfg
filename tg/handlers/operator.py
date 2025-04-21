@@ -386,6 +386,7 @@ async def manage_req(call: CallbackQuery, state: FSMContext):
             f"`{req.info if req.info else 'Без замеитки'}`")
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'}", callback_data=f"activate_req_{req.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
     builder.adjust(1)
     await call.message.edit_text(text=text, parse_mode="Markdown", reply_markup=builder.as_markup())
@@ -425,42 +426,42 @@ async def referral_system(msg: Message, bot: Bot):
     text = shop_stats_text.format(ref_link=f"https://t.me/{bot_username}?start={user.referral_code}")
     await msg.answer(text, parse_mode="Markdown")
 
-# @router.callback_query(F.data.startswith("activate_req_"))
-# async def activate_req_edit(call: CallbackQuery):
-#     data = call.data.split("_")
-#     req = await sync_to_async(Req.objects.get)(id=data[2])
-#     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
-#     if req.active:
-#         req.active = False
-#         req.save()
-#         active_reqs = await sync_to_async(Req.objects.filter)(active=True, user=user)
-#         if not active_reqs:
-#             bottom = await changer_panel_bottom(user)
-#             await call.message.answer("✔️ _Вы вышли из режима P2P_", reply_markup=bottom, parse_mode="Markdown")
-#     elif not req.active:
-#         total_amount_val, awaiting_usdt = await balance_val(user)
-#         val_in_usdt = total_amount_val + awaiting_usdt
-#         ostatok = user.limit - val_in_usdt
-#         if ostatok > 25:
-#             active_reqs = await sync_to_async(Req.objects.filter)(active=True, user=user)
-#             req.active = True
-#             req.save()
-#             if len(active_reqs) == 1:
-#                 bottom = await changer_panel_bottom(user)
-#                 await call.message.answer("🟢  _Включен P2P режим!_", reply_markup=bottom, parse_mode="Markdown")
-#         else:
-#             text = f"   🧮 {hbold('Валидная сумма')}: {hbold(f'${round(ostatok, 2)}')}\n\n\n❗️ Задействовать фиатный счет не удалось!"
-#             await call.message.answer(text, parse_mode="HTML")
-#
-#     reqs = await sync_to_async(Req.objects.filter)(user=user)
-#     builder = InlineKeyboardBuilder()
-#     for req in reqs:
-#         short_name = req.name[:3].upper()
-#         last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
-#         builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits}",
-#                                          callback_data=f"activate_req_{req.id}"))
-#     builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_settings"))
-#     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+@router.callback_query(F.data.startswith("activate_req_"))
+async def activate_req_edit(call: CallbackQuery):
+    data = call.data.split("_")
+    req = await sync_to_async(Req.objects.get)(id=data[2])
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    if req.active:
+        req.active = False
+        req.save()
+        active_reqs = await sync_to_async(Req.objects.filter)(active=True, user=user)
+        if not active_reqs:
+            bottom = await changer_panel_bottom(user)
+            await call.message.answer("✔️ _Вы вышли из режима P2P_", reply_markup=bottom, parse_mode="Markdown")
+    elif not req.active:
+        total_amount_val, awaiting_usdt = await balance_val(user)
+        val_in_usdt = total_amount_val + awaiting_usdt
+        ostatok = user.limit - val_in_usdt
+        if ostatok > 25:
+            active_reqs = await sync_to_async(Req.objects.filter)(active=True, user=user)
+            req.active = True
+            req.save()
+            if len(active_reqs) == 1:
+                bottom = await changer_panel_bottom(user)
+                await call.message.answer("🟢  _Включен P2P режим!_", reply_markup=bottom, parse_mode="Markdown")
+        else:
+            text = f"   🧮 {hbold('Валидная сумма')}: {hbold(f'${round(ostatok, 2)}')}\n\n\n❗️ Задействовать фиатный счет не удалось!"
+            await call.message.answer(text, parse_mode="HTML")
+
+    reqs = await sync_to_async(Req.objects.filter)(user=user)
+    builder = InlineKeyboardBuilder()
+    for req in reqs:
+        short_name = req.name[:3].upper()
+        last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
+        builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits}",
+                                         callback_data=f"activate_req_{req.id}"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_settings"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("decline_invoice_"))
 async def decline_invoice(call: CallbackQuery, bot: Bot):
