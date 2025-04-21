@@ -88,7 +88,7 @@ async def manage_courses(msg: Message):
         text += f"{country.country.upper()}-USDT = {country.fiat_to_usdt}\n"
         text += f"{country.country.upper()}-USDT = {country.fiat_to_usdt_for_shop} (SHOP PRICE)\n\n"
     builder.adjust(2)
-    await msg.answer(text, reply_markup=builder.as_markup())
+    await msg.answer(text if text else "123", reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("change_course_"))
 async def change_courses(call: CallbackQuery):
@@ -188,7 +188,7 @@ async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
     text = shop_stats_text.format(ref_link=f"https://t.me/{bot_username}?start={new_promo.code}")
     await call.message.answer(f"`{text}`\n\nОтправьте ссылку новому магазину!")
 
-@router.callback_query(F.data == "admin_new_shop_promo")
+@router.callback_query(F.data == "admin_new_operator_promo")
 async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
     new_promo = await sync_to_async(Promo.objects.create)(type="new_changer")
     bot_info = await bot.get_me()
