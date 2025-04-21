@@ -185,7 +185,7 @@ async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
     new_promo = await sync_to_async(Promo.objects.create)(type="new_shop")
     bot_info = await bot.get_me()
     bot_username = bot_info.username
-    text = shop_stats_text.format(ref_link=f"https://t.me/{bot_username}?start={new_promo.code}")
+    text = f"https://t.me/{bot_username}?start={new_promo.code}"
     await call.message.answer(f"`{text}`\n\nОтправьте ссылку новому магазину!")
 
 @router.callback_query(F.data == "admin_new_operator_promo")
@@ -193,5 +193,5 @@ async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
     new_promo = await sync_to_async(Promo.objects.create)(type="new_changer")
     bot_info = await bot.get_me()
     bot_username = bot_info.username
-    text = shop_stats_text.format(ref_link=f"https://t.me/{bot_username}?start={new_promo.code}")
+    text = f"https://t.me/{bot_username}?start={new_promo.code}"
     await call.message.answer(f"`{text}`\n\nОтправьте ссылку новому оператору!")
