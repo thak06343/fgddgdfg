@@ -474,9 +474,8 @@ async def admin_invoice(call: CallbackQuery):
                                      amount_kgs=invoice.amount_in_fiat, amount_usdt=invoice.amount_in_usdt_for_changer)
     builder = InlineKeyboardBuilder()
     if invoice.status != "deleted" and not invoice.accepted:
-
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
-    else:
+    elif invoice.status == "deleted":
         text += "\n❌ Инвойс удален"
     req_usages = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
     for req_usage in req_usages:
