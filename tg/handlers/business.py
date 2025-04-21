@@ -251,13 +251,13 @@ async def operator_manage(call: CallbackQuery):
     builder.row(InlineKeyboardButton(text=f"➕ Оператор", callback_data=f"add_new_shop_operator"))
     operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
     for operator in operators:
+        text = f"{'🟢' if operator.active else '⚫️'} {operator.operator.username if operator.operator.username else operator.operator.first_name}"
         builder.add(InlineKeyboardButton(
-            text=f"{'🟢' if operator.active else '⚫️'} {operator.operator.username if operator.operator.username else
-            f'{operator.operator.first_name} {operator.operator.last_name}'}", callback_data=f"operator_{operator.id}"))
+            text=text, callback_data=f"operator_{operator.id}"))
     builder.adjust(1, 2)
     await call.message.edit_text(settings_text, reply_markup=builder.as_markup())
 
- 
+
 
 
 @router.callback_query(F.data == "my_operators")
