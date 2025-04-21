@@ -203,7 +203,7 @@ async def admin_all_shops(call: CallbackQuery):
             if page_number < total_pages:
                 builder.row(
                     InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
-            await call.message.reply_markup(reply_markup=builder.as_markup())
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
         await send_invoices_page(call, page_number, total_pages)
     else:
