@@ -141,7 +141,7 @@ async def shop_statistics(msg: Message):
 
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="💳 Платежи", callback_data="all_shop_invoices"))
-    builder.add(InlineKeyboardButton(text=f"Операторы", callback_data="all_shop_operators"))
+    # builder.add(InlineKeyboardButton(text=f"Операторы", callback_data="all_shop_operators"))
     builder.adjust(1)
 
     await msg.answer(stat_text, reply_markup=builder.as_markup(), parse_mode="HTML")
@@ -282,7 +282,7 @@ async def my_operators(call: CallbackQuery):
     operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
     builder.row(InlineKeyboardButton(text="🔱 Все инвойсы", callback_data="business_all_invoices"))
     for operator in operators:
-        builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_{operator.id}"))
+        builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_business_op_invoices_{operator.id}"))
     builder.adjust(2)
     await call.message
 
