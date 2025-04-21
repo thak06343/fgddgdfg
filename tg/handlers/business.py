@@ -47,8 +47,14 @@ class WithdrawToShopState(StatesGroup):
 
 @router.callback_query(F.data == "shop_order_to_withdraw")
 async def shop_order_to_withdraw(call: CallbackQuery, state: FSMContext):
-    await state.set_state(WithdrawToShopState.awaiting_ltc_req)
-    await call.message.answer("💸 Введите кошелек LTC для вывода:")
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    shop = await sync_to_async(Shop.objects.get)(boss=user)
+    balance, invoices = await shop_balance(shop)
+    if balance >= 50:
+        await state.set_state(WithdrawToShopState.awaiting_ltc_req)
+        await call.message.answer("💸 Введите кошелек LTC для вывода:")
+    else:
+        await call.answer("Недостаточный баланс! Вывод от 50$", show_alert=True)
 
 @router.message(WithdrawToShopState.awaiting_ltc_req)
 async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
@@ -135,10 +141,17 @@ async def shop_statistics(msg: Message):
 
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="💳 Платежи", callback_data="all_shop_invoices"))
+    builder.add(InlineKeyboardButton(text=f"Операторы", callback_data="all_shop_operators"))
     builder.adjust(1)
 
     await msg.answer(stat_text, reply_markup=builder.as_markup(), parse_mode="HTML")
 
+
+@router.callback_query(F.data == "all_shop_operators")
+async def all_shop_operators(call: CallbackQuery):
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    shop = await sync_to_async(Shop.objects.get)(boss=user)
+    operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
 
 @router.callback_query(F.data == "all_shop_invoices")
 async def all_shop_invoices(call: CallbackQuery):
