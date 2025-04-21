@@ -473,7 +473,6 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
     if user.is_admin:
-
         builder.adjust(2)
     else:
         admin = await sync_to_async(TGUser.objects.filter)(is_admin=True)
@@ -483,10 +482,9 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
                 f"USDT(SHOP) - {invoice.amount_in_usdt}\n"
                 f"operator - {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}\n")
         try:
-
-            check_msg = await bot.send_photo(admin.user_id, last_usage.photo, reply_markup=builder.as_markup(), caption=text)
+            check_msg = await bot.send_photo(chat_id=admin.user_id, photo=last_usage.photo, reply_markup=builder.as_markup(), caption=text)
         except Exception as e:
-            check_msg = await bot.send_document(admin.user_id, last_usage.photo, reply_markup=builder.as_markup(), caption=text)
+            check_msg = await bot.send_document(chat_id=admin.user_id, document=last_usage.photo, reply_markup=builder.as_markup(), caption=text)
         await call.answer("Информация отправлена", show_alert=True)
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{invoice.id}"))

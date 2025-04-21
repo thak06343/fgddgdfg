@@ -13,7 +13,6 @@ from ..text import main_page_text, add_new_req_text, settings_text, order_operat
 from django.db.models import Sum, Count, Q, FloatField
 from django.db.models.functions import Coalesce
 from datetime import date
-
 router = Router()
 
 class IsShopBoss(Filter):
@@ -213,7 +212,7 @@ async def shop_boss_invoice(call: CallbackQuery):
             user_link = f"tg://user?id={req_usage.chat.client.user_id}"
         date_text = timezone.now().strftime('%d.%m.%Y %H:%M')
         text = order_operator_text.format(user_link=user_link, amount=invoice.amount_in_kzt, date=date_text,
-                                          full_name=full_name)
+                                          full_name=full_name, status=req_usage.status)
         builder = InlineKeyboardBuilder()
         if req_usage.active:
             builder.add(

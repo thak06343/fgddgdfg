@@ -78,30 +78,33 @@ async def pay_checker(invoice, msg, bot, chat):
     while True:
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
-            req_usage = await sync_to_async(ReqUsage.objects.filter)(id=new_req_usage.id)
-            if req_usage:
-                req_usage = req_usage.first()
-                if req_usage.status == "photo_sent" and not photo_sent:
-                    photo_sent = True
-                if secs >= 700:
-                    new_req_usage.status = "timeout"
-                    new_req_usage.active = False
-                    await sync_to_async(new_req_usage.save)()
-                    break
-                if invoice.accepted:
-                    await msg.answer("✅")
-                    new_req_usage.status = "finish"
-                    new_req_usage.active = False
-                    await sync_to_async(new_req_usage.save)()
-                    changer = invoice.req.user
-                    usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
-                    if not usage_reqs:
-                        total_amount_val, awaiting_usdt  = await balance_val(changer)
-                        val_in_usdt = total_amount_val + awaiting_usdt
-                        ostatok = changer.limit - val_in_usdt
-                        if ostatok <= 25:
-                            await req_inactive(changer)
-                            await bot.send_message(chat_id=changer.user_id, text="Режим P2P отключен\n\n❗️ Для завершения круга перейдите в раздел P2P",
+            req_usage = await sync_to_async(ReqUsage.objects.get)(id=new_req_usage.id)
+            if invoice.status == "deleted":
+                new_req_usage.status = "timeout"
+                new_req_usage.active = False
+                await sync_to_async(new_req_usage.save)()
+                break
+            if req_usage.status == "photo_sent" and not photo_sent:
+                photo_sent = True
+            if secs >= 700:
+                new_req_usage.status = "timeout"
+                new_req_usage.active = False
+                await sync_to_async(new_req_usage.save)()
+                break
+            if invoice.accepted:
+                await msg.answer("✅")
+                new_req_usage.status = "finish"
+                new_req_usage.active = False
+                await sync_to_async(new_req_usage.save)()
+                changer = invoice.req.user
+                usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
+                if not usage_reqs:
+                    total_amount_val, awaiting_usdt  = await balance_val(changer)
+                    val_in_usdt = total_amount_val + awaiting_usdt
+                    ostatok = changer.limit - val_in_usdt
+                    if ostatok <= 25:
+                        await req_inactive(changer)
+                        await bot.send_message(chat_id=changer.user_id, text="Режим P2P отключен\n\n❗️ Для завершения круга перейдите в раздел P2P",
                                                    reply_markup=await changer_panel_bottom(changer))
 
 

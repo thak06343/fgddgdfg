@@ -5,9 +5,9 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
-from .utils import  get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE
-from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo
-
+from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance
+from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo, Shop, ReqUsage
+from ..text import admin_invoice_text
 
 router = Router()
 
@@ -160,11 +160,62 @@ async def awaiting_kzt_to_fiat(msg: Message, state: FSMContext):
 @router.message(F.text == "🏵 Промо")
 async def admin_promo_create(msg: Message):
     builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="🏪 Магазины", callback_data="admin_all_shops"))
     builder.add(InlineKeyboardButton(text="➕ Новый магазин", callback_data="admin_new_shop_promo"))
     builder.add(InlineKeyboardButton(text="➕ Новый оператор обмена", callback_data="admin_new_operator_promo"))
     builder.adjust(1)
     text = "Выберите где хотите создать промокод:"
     await msg.answer(text, reply_markup=builder.as_markup())
+
+@router.callback_query(F.data == "admin_all_shops")
+async def admin_all_shops(call: CallbackQuery):
+    all_shops = await sync_to_async(Shop.objects.all)()
+    if all_shops:
+        total_pages = (len(all_shops) + PAGE_SIZE - 1) // PAGE_SIZE
+        page_number = 1
+
+        @router.callback_query(F.data.startswith("next_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
+            await send_invoices_page(call, page_number, total_pages)
+
+        @router.callback_query(F.data.startswith("prev_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number > 1:
+                page_number = 1
+            await send_invoices_page(call, page_number, total_pages)
+
+        async def send_invoices_page(call, page_number, total_pages):
+            start_index = (page_number - 1) * PAGE_SIZE
+            end_index = min(start_index + PAGE_SIZE, len(all_shops))
+            inv_page = all_shops[start_index:end_index]
+
+            builder = InlineKeyboardBuilder()
+            for shop in inv_page:
+                builder.add(InlineKeyboardButton(text=f"{shop.name.upper()}", callback_data=f"admin_show_shop_{shop.id}"))
+            builder.adjust(2)
+            if page_number > 1:
+                builder.row(
+                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+            if page_number < total_pages:
+                builder.row(
+                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+            await call.message.reply_markup(reply_markup=builder.as_markup())
+
+        await send_invoices_page(call, page_number, total_pages)
+    else:
+        await call.answer("Пусто!")
+
+@router.callback_query(F.data.startswith("admin_show_shop_"))
+async def admin_show_shop(call: CallbackQuery):
+    data = call.data.split("_")
+    shop = await sync_to_async(Shop.objects.get)(id=data[3])
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text=f"Создать оператора для {shop.name.upper()}", callback_data=f"admin_shop_operator_promo_{shop.id}"))
+    builder.row(InlineKeyboardButton(text="", callback_data="admin_all_shops"))
 
 @router.callback_query(F.data == "admin_new_shop_promo")
 async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
@@ -188,11 +239,70 @@ async def admin_all_invoices(msg: Message):
     builder.add(InlineKeyboardButton(text="Все", callback_data="admin_all_invoices"))
     builder.add(InlineKeyboardButton(text="Принятые", callback_data="admin_all_accepted_invoices"))
     builder.add(InlineKeyboardButton(text="Просроченные", callback_data="admin_all_expired_invoices"))
+    builder.add(InlineKeyboardButton(text="Отправлена фото", callback_data="admin_all_photo_sent_invoices"))
+    await msg.answer("123", reply_markup=builder.as_markup())
 
 
+@router.callback_query(F.data == "admin_all_photo_sent_invoices")
+async def admin_all_invoices(call: CallbackQuery):
+    invoices = await sync_to_async(Invoice.objects.filter)()
+    invoices = invoices.order_by('-date_used')
+    if invoices:
+        total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
+        page_number = 1
 
+        @router.callback_query(F.data.startswith("next_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
+            await send_invoices_page(call, page_number, total_pages)
 
-    invoices = await sync_to_async(Invoice.objects.all)()
+        @router.callback_query(F.data.startswith("prev_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number > 1:
+                page_number = 1
+            await send_invoices_page(call, page_number, total_pages)
+
+        async def send_invoices_page(call, page_number, total_pages):
+            start_index = (page_number - 1) * PAGE_SIZE
+            end_index = min(start_index + PAGE_SIZE, len(invoices))
+            inv_page = invoices[start_index:end_index]
+
+            builder = InlineKeyboardBuilder()
+            for invoice in inv_page:
+                req_usage = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
+                if req_usage:
+                    req_usage = req_usage.first()
+                    if req_usage.photo:
+                        active_not = ''
+                        if invoice.accepted:
+                            active_not += "✅"
+                        elif invoice.active:
+                            active_not += "♻️"
+                        else:
+                            active_not += "❌"
+                        builder.add(InlineKeyboardButton(
+                            text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
+                            callback_data=f"admin_invoice_{invoice.id}"))
+            builder.adjust(2)
+            if page_number > 1:
+                builder.row(
+                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+            if page_number < total_pages:
+                builder.row(
+                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+        await send_invoices_page(call, page_number, total_pages)
+    else:
+        await call.message.answer("Нет инвойсов!")
+
+@router.callback_query(F.data == "admin_all_expired_invoices")
+async def admin_all_invoices(call: CallbackQuery):
+    invoices = await sync_to_async(Invoice.objects.filter)(status="timeout")
+    invoices = invoices.order_by('-date_used')
     if invoices:
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
         page_number = 1
@@ -235,8 +345,160 @@ async def admin_all_invoices(msg: Message):
             if page_number < total_pages:
                 builder.row(
                     InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
-            await call.message.edit_text(f"`{shop_operator.shop.name}`", reply_markup=builder.as_markup())
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
         await send_invoices_page(call, page_number, total_pages)
     else:
         await call.message.answer("Нет инвойсов!")
+
+
+
+@router.callback_query(F.data == "admin_all_accepted_invoices")
+async def admin_all_invoices(call: CallbackQuery):
+    invoices = await sync_to_async(Invoice.objects.filter)(accepted=True)
+    invoices = invoices.order_by('-date_used')
+    if invoices:
+        total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
+        page_number = 1
+
+        @router.callback_query(F.data.startswith("next_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
+            await send_invoices_page(call, page_number, total_pages)
+
+        @router.callback_query(F.data.startswith("prev_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number > 1:
+                page_number = 1
+            await send_invoices_page(call, page_number, total_pages)
+
+        async def send_invoices_page(call, page_number, total_pages):
+            start_index = (page_number - 1) * PAGE_SIZE
+            end_index = min(start_index + PAGE_SIZE, len(invoices))
+            inv_page = invoices[start_index:end_index]
+
+            builder = InlineKeyboardBuilder()
+            for invoice in inv_page:
+                active_not = ''
+                if invoice.accepted:
+                    active_not += "✅"
+                elif invoice.active:
+                    active_not += "♻️"
+                else:
+                    active_not += "❌"
+                builder.add(InlineKeyboardButton(
+                    text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
+                    callback_data=f"admin_invoice_{invoice.id}"))
+            builder.adjust(2)
+            if page_number > 1:
+                builder.row(
+                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+            if page_number < total_pages:
+                builder.row(
+                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+        await send_invoices_page(call, page_number, total_pages)
+    else:
+        await call.message.answer("Нет инвойсов!")
+
+
+@router.callback_query(F.data == "admin_all_invoices")
+async def admin_all_invoices(call: CallbackQuery):
+    invoices = await sync_to_async(Invoice.objects.all)()
+    invoices = invoices.order_by('-date_used')
+    if invoices:
+        total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
+        page_number = 1
+
+        @router.callback_query(F.data.startswith("next_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
+            await send_invoices_page(call, page_number, total_pages)
+
+        @router.callback_query(F.data.startswith("prev_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number > 1:
+                page_number = 1
+            await send_invoices_page(call, page_number, total_pages)
+
+        async def send_invoices_page(call, page_number, total_pages):
+            start_index = (page_number - 1) * PAGE_SIZE
+            end_index = min(start_index + PAGE_SIZE, len(invoices))
+            inv_page = invoices[start_index:end_index]
+
+            builder = InlineKeyboardBuilder()
+            for invoice in inv_page:
+                active_not = ''
+                if invoice.accepted:
+                    active_not += "✅"
+                elif invoice.active:
+                    active_not += "♻️"
+                else:
+                    active_not += "❌"
+                builder.add(InlineKeyboardButton(
+                    text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
+                    callback_data=f"admin_invoice_{invoice.id}"))
+            builder.adjust(2)
+            if page_number > 1:
+                builder.row(
+                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+            if page_number < total_pages:
+                builder.row(
+                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+        await send_invoices_page(call, page_number, total_pages)
+    else:
+        await call.message.answer("Нет инвойсов!")
+
+@router.callback_query(F.data.startswith("admin_invoice_"))
+async def admin_invoice(call: CallbackQuery):
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
+    text = admin_invoice_text.format(operator=invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name,
+                                     shop=invoice.shop.name.upper(), amount=invoice.amount_in_kzt, date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
+                                     amount_kgs=invoice.amount_in_fiat, amount_usdt=invoice.amount_in_usdt_for_changer)
+    builder = InlineKeyboardBuilder()
+    if invoice.status != "deleted":
+        builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
+    else:
+        text += "\n❌ Инвойс удален"
+    req_usages = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
+    for req_usage in req_usages:
+        if req_usages.photo:
+            builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
+    builder.adjust(1)
+    await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+
+@router.callback_query(F.data.startswith("admin_show_photo_"))
+async def admin_show_photo(call: CallbackQuery):
+    data = call.data.split("_")
+    req_usage = await sync_to_async(ReqUsage.objects.get)(id=data[3])
+    try:
+        await call.message.answer_photo(req_usage.photo)
+    except Exception as e:
+        await call.message.answer_document(req_usage.photo)
+
+@router.callback_query(F.data.startswith("admin_del_invoice_"))
+async def admin_del_invoice(call: CallbackQuery):
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[3])
+    invoice.status = "deleted"
+    invoice.save()
+    await call.answer("Инвойс удалён!")
+
+@router.callback_query(F.data.startswith("decline_invoice_"))
+async def decline_invoice_admin(call: CallbackQuery):
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
+    invoice.status = "deleted"
+    invoice.save()
+    await call.answer("Инвойс удалён!")

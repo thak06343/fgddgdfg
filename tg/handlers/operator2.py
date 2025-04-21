@@ -113,7 +113,8 @@ async def shop_operator_invoice(call: CallbackQuery):
             else:
                 user_link = f"tg://user?id={req_usage.chat.client.user_id}"
             date_text = timezone.now().strftime('%d.%m.%Y %H:%M')
-            text = order_operator_text.format(user_link=user_link, amount=invoice.amount_in_kzt, date=date_text, full_name=full_name)
+            status = req_usage.status
+            text = order_operator_text.format(user_link=user_link, amount=invoice.amount_in_kzt, date=date_text, full_name=full_name, status=status)
             builder = InlineKeyboardBuilder()
             if req_usage.active:
                 builder.add(InlineKeyboardButton(text=f"Не получается отправить", callback_data=f"cant_send_{invoice.id}"))
