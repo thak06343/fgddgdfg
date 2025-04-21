@@ -240,6 +240,7 @@ async def admin_all_invoices(msg: Message):
     builder.add(InlineKeyboardButton(text="Принятые", callback_data="admin_all_accepted_invoices"))
     builder.add(InlineKeyboardButton(text="Просроченные", callback_data="admin_all_expired_invoices"))
     builder.add(InlineKeyboardButton(text="Отправлена фото", callback_data="admin_all_photo_sent_invoices"))
+    builder.adjust(1)
     await msg.answer("123", reply_markup=builder.as_markup())
 
 
@@ -279,7 +280,7 @@ async def admin_all_invoices(call: CallbackQuery):
                         active_not = ''
                         if invoice.accepted:
                             active_not += "✅"
-                        elif invoice.active:
+                        elif req_usage.active:
                             active_not += "♻️"
                         else:
                             active_not += "❌"
@@ -331,8 +332,6 @@ async def admin_all_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                elif invoice.active:
-                    active_not += "♻️"
                 else:
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(
@@ -385,8 +384,6 @@ async def admin_all_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                elif invoice.active:
-                    active_not += "♻️"
                 else:
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(
@@ -438,8 +435,6 @@ async def admin_all_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                elif invoice.active:
-                    active_not += "♻️"
                 else:
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(
