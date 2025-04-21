@@ -71,10 +71,6 @@ async def start(msg: Message, command: CommandObject, bot: Bot):
         bottoms = await changer_panel_bottom(user)
         await msg.answer("☀️ *Приветствие*", reply_markup=bottoms, parse_mode="Markdown")
     shops = await sync_to_async(Shop.objects.filter)(boss=user)
-    if shops:
-        shop = shops.first()
-        shop_panel_markup = await shop_panel()
-        await msg.answer(f"---`{shop.name.upper()}`---", parse_mode="Markdown", reply_markup=shop_panel_markup)
     shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
     if shop_operator:
         shop_operator_markup = await shop_operator_panel()
@@ -82,5 +78,8 @@ async def start(msg: Message, command: CommandObject, bot: Bot):
     if user.is_admin:
         admin_bottom = await admin_panel()
         await msg.answer("🔆 Приветствие!", reply_markup=admin_bottom)
-
+    if shops:
+        shop = shops.first()
+        shop_panel_markup = await shop_panel()
+        await msg.answer(f"---`{shop.name.upper()}`---", parse_mode="Markdown", reply_markup=shop_panel_markup)
 
