@@ -177,6 +177,7 @@ async def admin_promo_create(msg: Message):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="➕ Новый магазин", callback_data="admin_new_shop_promo"))
     builder.add(InlineKeyboardButton(text="➕ Новый оператор обмена", callback_data="admin_new_operator_promo"))
+    builder.adjust(1)
     text = "Выберите где хотите создать промокод:"
     await msg.answer(text, reply_markup=builder.as_markup())
 
@@ -185,8 +186,8 @@ async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
     new_promo = await sync_to_async(Promo.objects.create)(type="new_shop")
     bot_info = await bot.get_me()
     bot_username = bot_info.username
-    text = f"https://t.me/{bot_username}?start={new_promo.code}"
-    await call.message.answer(f"`{text}`\n\nОтправьте ссылку новому магазину!")
+    link = f"https://t.me/{bot_username}?start={new_promo.code}"
+    await call.message.answer(f"`{link}`\n\nОтправьте ссылку новому магазину!", parse_mode="Markdown")
 
 @router.callback_query(F.data == "admin_new_operator_promo")
 async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
@@ -194,4 +195,4 @@ async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
     bot_info = await bot.get_me()
     bot_username = bot_info.username
     text = f"https://t.me/{bot_username}?start={new_promo.code}"
-    await call.message.answer(f"`{text}`\n\nОтправьте ссылку новому оператору!")
+    await call.message.answer(f"`{text}`\n\nОтправьте ссылку новому оператору!", parse_mode="Markdown")
