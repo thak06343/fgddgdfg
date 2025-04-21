@@ -64,13 +64,15 @@ async def start(msg: Message, command: CommandObject, bot: Bot):
                 await promo_coder(promo, user, msg, bot)
         except Exception as e:
             if not user.ref_by:
-                refer = await sync_to_async(TGUser.objects.get)(referral_code=args)
-                user.ref_by = refer
-                if not user.is_changer:
-                    user.is_changer = True
-                user.save()
-                bottoms = await changer_panel_bottom(user)
-                await msg.answer("☀️ *Приветствие*", reply_markup=bottoms, parse_mode="Markdown")
+                refer = await sync_to_async(TGUser.objects.filter)(referral_code=args)
+                if refer:
+                    refer = refer.first()
+                    user.ref_by = refer
+                    if not user.is_changer:
+                        user.is_changer = True
+                    user.save()
+                    bottoms = await changer_panel_bottom(user)
+                    await msg.answer("☀️ *Приветствие*", reply_markup=bottoms, parse_mode="Markdown")
     if user.is_changer:
         bottoms = await changer_panel_bottom(user)
         await msg.answer("☀️ *Приветствие*", reply_markup=bottoms, parse_mode="Markdown")

@@ -78,37 +78,35 @@ async def pay_checker(invoice, msg, bot, chat):
     while True:
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
-            req_usage = await sync_to_async(ReqUsage.objects.get)(id=new_req_usage.id)
-            if req_usage.status == "photo_sent" and not photo_sent:
-                photo_sent = True
-            if secs >= 900:
-                new_req_usage.status = "timeout"
-                new_req_usage.active = False
-                await sync_to_async(new_req_usage.save)()
-                break
-            if invoice.accepted:
-                await msg.answer("✅")
-                new_req_usage.status = "finish"
-                new_req_usage.active = False
-                await sync_to_async(new_req_usage.save)()
-                changer = invoice.req.user
-                builder = InlineKeyboardBuilder()
-                # builder.add(InlineKeyboardButton(text=f"+{invoice.amount_in_kzt}", callback_data="fdgsgfdg"))
-                # await bot.edit_message_text(chat_id=operator_msg.chat.id, message_id=operator_msg.message_id,
-                #                             text=f"✅ Платеж принят {link}", reply_markup=builder.as_markup())
-                usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
-                print(usage_reqs)
-                if not usage_reqs:
-                    total_amount_val, awaiting_usdt  = await balance_val(changer)
-                    val_in_usdt = total_amount_val + awaiting_usdt
-                    ostatok = changer.limit - val_in_usdt
-                    if ostatok <= 25:
-                        await req_inactive(changer)
-                        await bot.send_message(chat_id=changer.user_id, text="Режим P2P отключен\n\n❗️ Для завершения круга перейдите в раздел P2P",
-                                               reply_markup=await changer_panel_bottom(changer))
+            req_usage = await sync_to_async(ReqUsage.objects.filter)(id=new_req_usage.id)
+            if req_usage:
+                req_usage = req_usage.first()
+                if req_usage.status == "photo_sent" and not photo_sent:
+                    photo_sent = True
+                if secs >= 700:
+                    new_req_usage.status = "timeout"
+                    new_req_usage.active = False
+                    await sync_to_async(new_req_usage.save)()
+                    break
+                if invoice.accepted:
+                    await msg.answer("✅")
+                    new_req_usage.status = "finish"
+                    new_req_usage.active = False
+                    await sync_to_async(new_req_usage.save)()
+                    changer = invoice.req.user
+                    usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
+                    print(usage_reqs)
+                    if not usage_reqs:
+                        total_amount_val, awaiting_usdt  = await balance_val(changer)
+                        val_in_usdt = total_amount_val + awaiting_usdt
+                        ostatok = changer.limit - val_in_usdt
+                        if ostatok <= 25:
+                            await req_inactive(changer)
+                            await bot.send_message(chat_id=changer.user_id, text="Режим P2P отключен\n\n❗️ Для завершения круга перейдите в раздел P2P",
+                                                   reply_markup=await changer_panel_bottom(changer))
 
 
-                break
+                    break
         except Exception as e:
             print(e)
         await asyncio.sleep(30)
@@ -305,7 +303,7 @@ async def check_invoice(wid, invoice_id, bot):
                 async with session.get(url) as res:
                     if res.status == 200:
                         invoice_data = await res.json()
-                        if invoice_data['status'] == 'completed':
+                        if invoice_data['status'] == 'completed' or invoice_data['status'] == 'overpaid':
                             invoices = pack.invoices.all()
                             for invoice in invoices:
                                 invoice.sent_bank = True
@@ -507,3 +505,20 @@ async def format_transfer_result(data: dict) -> str:
         return text
     except Exception as e:
         return f"❌ Ошибка обработки данных перевода: {e}"
+
+async def operator_invoices(operator):
+    shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=operator)
+    usdt_balance, invoice_list = await sync_to_async(lambda: (
+        Invoice.objects.filter(accepted=True, shop=shop_operator.shop)
+        .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
+        list(Invoice.objects.filter(accepted=True, shop=shop_operator.shop))
+    ))()
+    return usdt_balance, invoice_list
+
+async def req_invoices(req):
+    usdt_balance, invoice_list = await sync_to_async(lambda: (
+        Invoice.objects.filter(accepted=True, req=req)
+        .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
+        list(Invoice.objects.filter(accepted=True, req=req))
+    ))()
+    return usdt_balance, invoice_list

@@ -60,7 +60,7 @@ class Req(models.Model):
     limit = models.FloatField(default=400)
     archived = models.BooleanField(default=False)
     country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True)
-
+    info = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user} {self.name} {self.cart} {self.country}"

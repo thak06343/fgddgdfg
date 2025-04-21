@@ -75,6 +75,9 @@ async def kzt_answer(msg: Message, bot: Bot):
                     req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
                     amount_in_usdt_for_changer=usdt_for_changer, shop=shop_operator.shop)
                 text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart)
+                if req.cart.startswith("9"):
+                    text += "\nПереводы только с Каспи\n"
+
                 await msg.answer(text, parse_mode="Markdown")
                 asyncio.create_task(pay_checker(new_invoice, msg, bot, chat))
             elif country.country == "uzs":

@@ -11,7 +11,7 @@ from aiogram.utils.markdown import hbold, hitalic, hcode
 from django.utils import timezone
 
 from .utils import changers_current_balance, balance_val, get_totals_reqs, req_adder, create_ltc_invoice, \
-    check_invoice, shop_balance, get_ltc_usd_rate, transfer_to_shop, PAGE_SIZE
+    check_invoice, shop_balance, get_ltc_usd_rate, transfer_to_shop, PAGE_SIZE, operator_invoices
 from ..kb import changer_panel_bottom, shop_panel
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Shop, Promo, ShopOperator, ReqUsage
 from ..text import main_page_text, add_new_req_text, settings_text, order_operator_text
@@ -277,14 +277,14 @@ async def my_operators(call: CallbackQuery):
     builder = InlineKeyboardBuilder()
     operators = await sync_to_async(ShopOperator.objects.filter)(shop=shop)
     builder.row(InlineKeyboardButton(text="🔱 Все инвойсы", callback_data="business_all_invoices"))
-    text = ""
+    text = " "
     for operator in operators:
-
+        balance, invoices = await operator_invoices(operator)
         text += (f"{operator.username if operator.username else f'{operator.first_name} {operator.last_name}'}\n"
-                 f"")
-        builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_business_op_invoices_{operator.id}"))
+                 f"За все время: {round(balance, 2)} (кол-во: {len(invoices)})\n\n")
+        builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_{operator.id}"))
     builder.adjust(2)
-    await call.message.edit_text()
+    await call.message.edit_text(text, reply_markup=builder.as_markup())
 
 @router.callback_query(F.data == "add_new_shop_operator")
 async def add_new_shop_oper(call: CallbackQuery, bot: Bot):
@@ -295,3 +295,57 @@ async def add_new_shop_oper(call: CallbackQuery, bot: Bot):
     bot_user = bot_info.username
     link = f"https://t.me/{bot_user}?start={new_operator_promo.code}"
     await call.message.answer(f"💡 Отправьте ссылку вашему новому оператору.\n\n`{link}`", parse_mode="Markdown")
+
+
+@router.callback_query(F.data.startswith("business_op_invoices_"))
+async def business_op_invoices(call: CallbackQuery):
+    data = call.data.split("_")
+    operator = await sync_to_async(TGUser.objects.get)(id=data[3])
+    invoices = await sync_to_async(lambda: Invoice.objects.filter(requsage__chat__operator=operator).distinct().order_by('-date_used'))()
+    if invoices:
+        total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
+        page_number = 1
+
+        @router.callback_query(F.data.startswith("next_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
+            await send_invoices_page(call, page_number, total_pages)
+
+        @router.callback_query(F.data.startswith("prev_page_"))
+        async def next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number > 1:
+                page_number = 1
+            await send_invoices_page(call, page_number, total_pages)
+
+        async def send_invoices_page(call, page_number, total_pages):
+            start_index = (page_number - 1) * PAGE_SIZE
+            end_index = min(start_index + PAGE_SIZE, len(invoices))
+            inv_page = invoices[start_index:end_index]
+
+            builder = InlineKeyboardBuilder()
+            for invoice in inv_page:
+                active_not = ''
+                if invoice.accepted:
+                    active_not += "✅"
+                elif invoice.active:
+                    active_not += "♻️"
+                else:
+                    active_not += "❌"
+                builder.add(InlineKeyboardButton(
+                    text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
+                    callback_data=f"shop_boss_invoice_{invoice.id}"))
+            builder.adjust(2)
+            if page_number > 1:
+                builder.row(
+                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+            if page_number < total_pages:
+                builder.row(
+                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+        await send_invoices_page(call, page_number, total_pages)
+    else:
+        await call.answer("Нет инвойсов!", show_alert=True)

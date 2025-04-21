@@ -203,7 +203,10 @@ async def admin_all_invoices(msg: Message):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Все", callback_data="admin_all_invoices"))
     builder.add(InlineKeyboardButton(text="Принятые", callback_data="admin_all_accepted_invoices"))
-    builder.add(InlineKeyboardButton(text=""))
+    builder.add(InlineKeyboardButton(text="Просроченные", callback_data="admin_all_expired_invoices"))
+
+
+
 
     invoices = await sync_to_async(Invoice.objects.all)()
     if invoices:
@@ -240,7 +243,7 @@ async def admin_all_invoices(msg: Message):
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(
                     text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
-                    callback_data=f"shop_operator_invoice_{invoice.id}"))
+                    callback_data=f"admin_invoice_{invoice.id}"))
             builder.adjust(2)
             if page_number > 1:
                 builder.row(

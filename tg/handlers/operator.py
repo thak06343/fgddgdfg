@@ -12,7 +12,8 @@ from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
 from aiogram.utils.markdown import hbold, hitalic, hcode
 from .utils import changers_current_balance, balance_val, get_totals_reqs, req_adder, create_ltc_invoice, \
-    check_invoice, create_limit_invoice, check_limit_invoice, get_ltc_usd_rate, transfer, changer_balance_with_invoices
+    check_invoice, create_limit_invoice, check_limit_invoice, get_ltc_usd_rate, transfer, changer_balance_with_invoices, \
+    req_invoices
 from ..kb import changer_panel_bottom
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, ReqUsage
 from ..text import main_page_text, add_new_req_text, settings_text, shop_stats_text
@@ -232,31 +233,31 @@ async def close_all_reqs(call: CallbackQuery, bot: Bot):
         .aggregate(total=Coalesce(Sum('amount_in_usdt_for_changer'), 0.0, output_field=FloatField()))['total'],
         list(Invoice.objects.filter(accepted=True, sent_bank=False, req__user=user))
     ))()
+    if total_amount_val and invoice_list:
+        invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
 
-    invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
-
-    ltc_amount_rounded = round(ltc_amount, 6)
-    ltc_amount_safe = ltc_amount_rounded + 0.000001  # защита от partpaid
+        ltc_amount_rounded = round(ltc_amount, 6)
+        ltc_amount_safe = ltc_amount_rounded + 0.000001  # защита от partpaid
 
 
-    invoice_id = invoice_info['invoice']
-    ltc_address = invoice_info['address']
-    expire = invoice_info['expire']
-    pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount_safe)
-    await sync_to_async(pack.invoices.add)(*invoice_list)
-    iso_expire_time = expire
-    dt = datetime.fromisoformat(iso_expire_time)
-    formatted_time = dt.strftime("%d %B %Y, %H:%M")
-    message = (
-        f"🧾 <b>Заявка №{pack.id}</b>\n\n"
-        f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
-        f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
-        f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
-        f"⏳ Действителен до: <b>{formatted_time}</b>\n"
-    )
+        invoice_id = invoice_info['invoice']
+        ltc_address = invoice_info['address']
+        expire = invoice_info['expire']
+        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount_safe)
+        await sync_to_async(pack.invoices.add)(*invoice_list)
+        iso_expire_time = expire
+        dt = datetime.fromisoformat(iso_expire_time)
+        formatted_time = dt.strftime("%d %B %Y, %H:%M")
+        message = (
+            f"🧾 <b>Заявка №{pack.id}</b>\n\n"
+            f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
+            f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
+            f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
+            f"⏳ Действителен до: <b>{formatted_time}</b>\n"
+        )
 
-    asyncio.create_task(check_invoice(pack.id, invoice_id, bot))
-    await call.message.answer(message, parse_mode="HTML")
+        asyncio.create_task(check_invoice(pack.id, invoice_id, bot))
+        await call.message.answer(message, parse_mode="HTML")
 
 @router.callback_query(F.data.startswith("send_to_bank_"))
 async def send_to_bank_req(call: CallbackQuery, bot: Bot):
@@ -270,30 +271,31 @@ async def send_to_bank_req(call: CallbackQuery, bot: Bot):
         .aggregate(total=Coalesce(Sum('amount_in_usdt_for_changer'), 0.0, output_field=FloatField()))['total'],
         list(Invoice.objects.filter(accepted=True, sent_bank=False, req__user=user))
     ))()
-    invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
+    if total_amount_val and invoice_list:
+        invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
 
-    ltc_amount_rounded = round(ltc_amount, 6)
-    ltc_amount_safe = ltc_amount_rounded + 0.000001
+        ltc_amount_rounded = round(ltc_amount, 6)
+        ltc_amount_safe = ltc_amount_rounded + 0.000001
 
-    invoice_id = invoice_info['invoice']
-    ltc_address = invoice_info['address']
-    expire = invoice_info['expire']
-    pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
-                                                              ltc_amount=ltc_amount_safe)
-    await sync_to_async(pack.invoices.add)(*invoice_list)
-    iso_expire_time = expire
-    dt = datetime.fromisoformat(iso_expire_time)
-    formatted_time = dt.strftime("%d %B %Y, %H:%M")
-    message = (
-        f"🧾 <b>Заявка №{pack.id}</b>\n\n"
-        f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
-        f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
-        f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
-        f"⏳ Действителен до: <b>{formatted_time}</b>\n"
-    )
+        invoice_id = invoice_info['invoice']
+        ltc_address = invoice_info['address']
+        expire = invoice_info['expire']
+        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
+                                                                  ltc_amount=ltc_amount_safe)
+        await sync_to_async(pack.invoices.add)(*invoice_list)
+        iso_expire_time = expire
+        dt = datetime.fromisoformat(iso_expire_time)
+        formatted_time = dt.strftime("%d %B %Y, %H:%M")
+        message = (
+            f"🧾 <b>Заявка №{pack.id}</b>\n\n"
+            f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
+            f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
+            f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
+            f"⏳ Действителен до: <b>{formatted_time}</b>\n"
+        )
 
-    asyncio.create_task(check_invoice(pack.id, invoice_id, bot))
-    await call.message.answer(message, parse_mode="HTML")
+        asyncio.create_task(check_invoice(pack.id, invoice_id, bot))
+        await call.message.answer(message, parse_mode="HTML")
 
 @router.message(F.text == "⚙️ Настройки")
 async def changer_settings(msg: Message):
@@ -367,9 +369,53 @@ async def manage_reqs(call: CallbackQuery):
     for req in reqs:
         short_name = req.name[:3].upper()
         last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
-        builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits} {'🔒' if req.archived else ''}", callback_data=f"activate_req_{req.id}"))
+        builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits} "
+                                              f"{'🔒' if req.archived else ' '}", callback_data=f"manage_req_{req.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_settings"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("manage_req_"))
+async def manage_req(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    req = await sync_to_async(Req.objects.get)(id=data[2])
+    usdt, invs = await req_invoices(req)
+    short_name = req.name[:3].upper()
+    last_digits = req.cart
+    text = (f"{short_name} {last_digits}\n"
+            f"${round(usdt, 2)} ({len(invs)})\n"
+            f"`{req.info if req.info else 'Без замеитки'}`")
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
+    builder.adjust(1)
+    await call.message.edit_text(text=text, parse_mode="Markdown", reply_markup=builder.as_markup())
+    await state.clear()
+
+@router.callback_query(F.data.startswith("add_description_to_req_"))
+async def add_description_to_req(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"manage_req_{data[4]}"))
+    await call.message.edit_text("Введите описание:", reply_markup=builder.as_markup())
+    await state.set_state(AddDescriptionToReqState.awaiting_desc)
+    await state.update_data(req_id=data[4])
+
+
+class AddDescriptionToReqState(StatesGroup):
+    awaiting_desc = State()
+
+@router.message(AddDescriptionToReqState.awaiting_desc)
+async def adding_description_to_req(msg: Message, state: FSMContext):
+    data = await state.get_data()
+    req_id = data.get("req_id")
+    req = await sync_to_async(Req.objects.get)(id=req_id)
+    if msg.text:
+        req.info = msg.text
+        req.save()
+        await state.clear()
+    builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"manage_reqs"))
+    await msg.answer("Описание успешно добавлено", reply_markup=builder.as_markup())
 
 @router.message(F.text == "🔗 Реф система")
 async def referral_system(msg: Message, bot: Bot):
