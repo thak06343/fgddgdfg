@@ -479,7 +479,7 @@ async def admin_invoice(call: CallbackQuery):
         text += "\n❌ Инвойс удален"
     req_usages = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
     for req_usage in req_usages:
-        if req_usages.photo:
+        if req_usage.photo:
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
     builder.adjust(1)
     await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
