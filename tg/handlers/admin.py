@@ -473,7 +473,8 @@ async def admin_invoice(call: CallbackQuery):
                                      shop=invoice.shop.name.upper(), amount=invoice.amount_in_kzt, date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
                                      amount_kgs=invoice.amount_in_fiat, amount_usdt=invoice.amount_in_usdt_for_changer)
     builder = InlineKeyboardBuilder()
-    if invoice.status != "deleted":
+    if invoice.status != "deleted" and not invoice.accepted:
+
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
     else:
         text += "\n❌ Инвойс удален"
