@@ -77,7 +77,6 @@ async def start(msg: Message, command: CommandObject, bot: Bot):
         await msg.answer(f"---`{shop.name.upper()}`---", parse_mode="Markdown", reply_markup=shop_panel_markup)
     shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
     if shop_operator:
-        shop_operator = shop_operator.first()
         shop_operator_markup = await shop_operator_panel()
         await msg.answer("🔆 Приветствие!", reply_markup=shop_operator_markup)
     if user.is_admin:
