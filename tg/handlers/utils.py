@@ -90,7 +90,7 @@ async def pay_checker(invoice, msg, bot, chat):
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
                 await sync_to_async(new_req_usage.save)()
-                break
+
             if invoice.accepted:
                 await msg.answer("✅")
                 new_req_usage.status = "finish"

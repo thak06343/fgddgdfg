@@ -473,6 +473,8 @@ async def admin_invoice(call: CallbackQuery):
                                      shop=invoice.shop.name.upper(), amount=round(invoice.amount_in_kzt, 2), date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
                                      amount_kgs=round(invoice.amount_in_fiat, 2), amount_usdt=round(invoice.amount_in_usdt_for_changer, 2))
     builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text=f"Принять от имени {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}",
+                                     callback_data=f"admin_accept_invoice_{invoice.id}"))
     if invoice.status != "deleted" and not invoice.accepted:
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
     elif invoice.status == "deleted":
@@ -484,7 +486,17 @@ async def admin_invoice(call: CallbackQuery):
     builder.adjust(1)
     await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
 
-
+@router.callback_query(F.data.startswith("admin_accept_invoice_"))
+async def admin_accept_invoice(call: CallbackQuery):
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[3])
+    invoice.accepted = True
+    invoice.save()
+    await call.answer("Инвойс принят!", show_alert=True)
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Обновить", callback_data=f"admin_invoice_{invoice.id}"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    
 @router.callback_query(F.data.startswith("admin_show_photo_"))
 async def admin_show_photo(call: CallbackQuery):
     data = call.data.split("_")
