@@ -496,7 +496,7 @@ async def admin_accept_invoice(call: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Обновить", callback_data=f"admin_invoice_{invoice.id}"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
-    
+
 @router.callback_query(F.data.startswith("admin_show_photo_"))
 async def admin_show_photo(call: CallbackQuery):
     data = call.data.split("_")

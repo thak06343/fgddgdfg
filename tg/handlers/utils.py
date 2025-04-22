@@ -108,7 +108,7 @@ async def pay_checker(invoice, msg, bot, chat):
                                                    reply_markup=await changer_panel_bottom(changer))
 
 
-                    break
+                break
         except Exception as e:
             print(e)
         await asyncio.sleep(30)
