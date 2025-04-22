@@ -102,9 +102,8 @@ async def kzt_answer(msg: Message, bot: Bot):
 @router.business_message(IsPhoto())
 async def send_photo_to_op(msg: Message, bot: Bot):
     chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=msg.chat.id)
-    last_usage = await sync_to_async(ReqUsage.objects.filter(chat=chat).order_by('-date_used'))()
+    last_usage = await sync_to_async(lambda: ReqUsage.objects.filter(chat=chat).order_by('-date_used').first())()
     if last_usage:
-        last_usage = last_usage.first()
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T)", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
         builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))

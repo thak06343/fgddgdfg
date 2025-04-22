@@ -75,6 +75,7 @@ async def pay_checker(invoice, msg, bot, chat):
                                                                  status="awaiting", chat=chat)
     secs = 0
     photo_sent = False
+    timeout = False
     while True:
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
@@ -86,10 +87,12 @@ async def pay_checker(invoice, msg, bot, chat):
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
-            if secs >= 900:
+            if secs >= 900 and not timeout:
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
+                timeout = True
                 await sync_to_async(new_req_usage.save)()
+
             if invoice.accepted:
                 await msg.answer("✅")
                 new_req_usage.status = "finish"
@@ -97,7 +100,7 @@ async def pay_checker(invoice, msg, bot, chat):
                 await sync_to_async(new_req_usage.save)()
                 changer = invoice.req.user
                 usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
-                if not usage_reqs:
+                if not await sync_to_async(usage_reqs.exists)():
                     total_amount_val, awaiting_usdt  = await balance_val(changer)
                     val_in_usdt = total_amount_val + awaiting_usdt
                     ostatok = changer.limit - val_in_usdt

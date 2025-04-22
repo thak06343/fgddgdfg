@@ -255,6 +255,15 @@ async def admin_all_invoices(msg: Message):
     builder.adjust(1)
     await msg.answer("123", reply_markup=builder.as_markup())
 
+@router.callback_query(F.data == "back_to_invoices")
+async def back_to_invoices(call: CallbackQuery):
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Все", callback_data="admin_all_invoices"))
+    builder.add(InlineKeyboardButton(text="Принятые", callback_data="admin_all_accepted_invoices"))
+    builder.add(InlineKeyboardButton(text="Просроченные", callback_data="admin_all_expired_invoices"))
+    builder.add(InlineKeyboardButton(text="Отправлена фото", callback_data="admin_all_photo_sent_invoices"))
+    builder.adjust(1)
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data == "admin_all_photo_sent_invoices")
 async def admin_all_invoices(call: CallbackQuery):
@@ -475,6 +484,7 @@ async def admin_invoice(call: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text=f"Принять от имени {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}",
                                      callback_data=f"admin_accept_invoice_{invoice.id}"))
+
     if invoice.status != "deleted" and not invoice.accepted:
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
     elif invoice.status == "deleted":
@@ -484,7 +494,10 @@ async def admin_invoice(call: CallbackQuery):
         if req_usage.photo:
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
     builder.adjust(1)
+    builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="back_to_invoices"))
     await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+
 
 @router.callback_query(F.data.startswith("admin_accept_invoice_"))
 async def admin_accept_invoice(call: CallbackQuery):
