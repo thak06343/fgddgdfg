@@ -40,14 +40,21 @@ class IsPhoto(BaseFilter):
     async def __call__(self, msg: Message):
         if msg.photo or msg.document:
             user, created = await sync_to_async(TGUser.objects.get_or_create)(user_id=msg.from_user.id)
+            user.username = msg.from_user.username
+            user.first_name = msg.from_user.first_name
+            user.last_name = msg.from_user.last_name
+            user.save()
             shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user)
             if not shop_operator:
                 chat, created = await sync_to_async(OperatorClientChat.objects.get_or_create)(chat_id=msg.chat.id)
                 chat.client = user
                 chat.save()
-                last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat) #, status="awaiting"
-                if last_usage:
-                    return True
+                return  True
+                # last_usage = await sync_to_async(ReqUsage.objects.filter)(chat=chat) #, status="awaiting"
+                # if last_usage:
+                #     return True
+            else:
+                return False
         else:
             return False
 
@@ -95,22 +102,23 @@ async def kzt_answer(msg: Message, bot: Bot):
 @router.business_message(IsPhoto())
 async def send_photo_to_op(msg: Message, bot: Bot):
     chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=msg.chat.id)
-    last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
-    last_usage = last_usage.first()
-    builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T)", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
-    builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
-    builder.adjust(2)
-    if msg.photo:
-        file_id = msg.photo[-1].file_id
-        check_msg = await bot.send_photo(last_usage.usage_req.user.user_id, file_id, reply_markup=builder.as_markup())
-    else:
-        file_id = msg.document.file_id
-        check_msg = await bot.send_document(last_usage.usage_req.user.user_id, file_id, reply_markup=builder.as_markup())
-    last_usage.status = "photo_sent"
-    last_usage.photo = file_id
-    last_usage.save()
-    try:
-        await bot.pin_chat_message(chat_id=check_msg.chat.id, message_id=check_msg.message_id)
-    except Exception as e:
-        print(e)
+    last_usage = await sync_to_async(ReqUsage.objects.filter(chat=chat).order_by('-date_used'))()
+    if last_usage:
+        last_usage = last_usage.first()
+        builder = InlineKeyboardBuilder()
+        builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T)", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
+        builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
+        builder.adjust(2)
+        if msg.photo:
+            file_id = msg.photo[-1].file_id
+            check_msg = await bot.send_photo(last_usage.usage_req.user.user_id, file_id, reply_markup=builder.as_markup())
+        else:
+            file_id = msg.document.file_id
+            check_msg = await bot.send_document(last_usage.usage_req.user.user_id, file_id, reply_markup=builder.as_markup())
+        last_usage.status = "photo_sent"
+        last_usage.photo = file_id
+        last_usage.save()
+        try:
+            await bot.pin_chat_message(chat_id=check_msg.chat.id, message_id=check_msg.message_id)
+        except Exception as e:
+            print(e)
