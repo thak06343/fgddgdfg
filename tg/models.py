@@ -52,6 +52,12 @@ class ShopOperator(models.Model):
     def __str__(self):
         return f"{self.shop} {self.operator} {self.active}"
 
+class Bank(models.Model):
+    name = models.CharField(max_length=255)
+    kzt_to_fiat = models.FloatField()
+    fiat_to_usdt = models.FloatField()
+    fiat_to_usdt_for_shop = models.FloatField()
+
 
 class Req(models.Model):
     user = models.ForeignKey(TGUser, on_delete=models.SET_NULL, null=True, blank=True)
@@ -62,6 +68,7 @@ class Req(models.Model):
     archived = models.BooleanField(default=False)
     country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True)
     info = models.TextField(null=True, blank=True)
+    bank = models.ForeignKey(Bank, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.user} {self.name} {self.cart} {self.country}"

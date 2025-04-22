@@ -370,7 +370,7 @@ async def cancel_limit_invoice(call: CallbackQuery):
 @router.callback_query(F.data == "manage_reqs")
 async def manage_reqs(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
-    reqs = await sync_to_async(Req.objects.filter)(user=user)
+    reqs = await sync_to_async(Req.objects.filter(user=user).order_by('archived'))()
     builder = InlineKeyboardBuilder()
     for req in reqs:
         short_name = req.name[:3].upper()
@@ -393,10 +393,19 @@ async def manage_req(call: CallbackQuery, state: FSMContext):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
     builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'}", callback_data=f"activate_req_{req.id}"))
+    builder.add(InlineKeyboardButton(text="❌ Удалить", callback_data=f"changer_archive_req_{req.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
     builder.adjust(1)
     await call.message.edit_text(text=text, parse_mode="Markdown", reply_markup=builder.as_markup())
     await state.clear()
+
+@router.callback_query(F.data.startswith("changer_archive_req_"))
+async def changer_archive_req(call: CallbackQuery):
+    data = call.data.split("_")
+    req = await sync_to_async(Req.objects.get)(id=data[3])
+    req.archived = True
+    req.save()
+    await call.answer("Архивировано")
 
 @router.callback_query(F.data.startswith("add_description_to_req_"))
 async def add_description_to_req(call: CallbackQuery, state: FSMContext):
@@ -541,9 +550,18 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
                 print(e)
             invoice.accepted = True
             invoice.amount_in_fiat = amount
+            country = invoice.req.country
+            if country.country != "uzs":
+                fiat = amount / country.kzt_to_fiat
+                usdt_for_changer = fiat / country.fiat_to_usdt
+                usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+            else:
+                fiat = amount * country.kzt_to_fiat
+                usdt_for_changer = fiat / country.fiat_to_usdt
+                usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+            invoice.amount_in_usdt = usdt_for_shop
+            invoice.amount_in_usdt_for_changer = usdt_for_changer
             invoice.save()
-
-
-
+        await state.clear()
     except Exception as e:
         print(e)

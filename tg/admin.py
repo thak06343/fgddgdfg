@@ -22,7 +22,7 @@ class ReqUsageAdmin(admin.ModelAdmin):
 
 @admin.register(OperatorClientChat)
 class OperatorClientChatAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'operator']
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
