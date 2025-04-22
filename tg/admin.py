@@ -47,4 +47,4 @@ class CountryAdmin(admin.ModelAdmin):
 
 @admin.register(WithdrawalMode)
 class WithdrawalModeAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'active', 'finish', 'user', 'ltc_amount']
