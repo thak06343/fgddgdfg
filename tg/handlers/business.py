@@ -202,12 +202,16 @@ async def shop_boss_invoice(call: CallbackQuery):
     req_usage = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
     if req_usage:
         req_usage = req_usage.first()
-        full_name = req_usage.chat.client.first_name if req_usage.chat.client.first_name else ''
-        full_name += req_usage.chat.client.last_name if req_usage.chat.client.last_name else ''
-        if req_usage.chat.client.username:
-            user_link = f"@{req_usage.chat.client.username}"
+        if req_usage and req_usage.chat and req_usage.chat.client:
+            full_name = req_usage.chat.client.first_name if req_usage.chat.client.first_name else ''
+            full_name += req_usage.chat.client.last_name if req_usage.chat.client.last_name else ''
+            if req_usage.chat.client.username:
+                user_link = f"@{req_usage.chat.client.username}"
+            else:
+                user_link = f"tg://user?id={req_usage.chat.client.user_id}"
         else:
-            user_link = f"tg://user?id={req_usage.chat.client.user_id}"
+            full_name = "Неизвестный пользователь"
+            user_link = "Нет ссылки"
         date_text = timezone.now().strftime('%d.%m.%Y %H:%M')
         text = order_operator_text.format(user_link=user_link, amount=invoice.amount_in_kzt, date=date_text,
                                           full_name=full_name, status=req_usage.status)
