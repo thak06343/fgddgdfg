@@ -470,8 +470,8 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     last_usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
-    builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
+    builder.add(InlineKeyboardButton(text="✅", callback_data=f"admin_accept_invoice_{last_usage.usage_inv.id}"))
+    builder.add(InlineKeyboardButton(text="❌", callback_data=f"admindecline_invoice_{last_usage.usage_inv.id}"))
     if user.is_admin:
         builder.adjust(2)
     else:

@@ -61,7 +61,11 @@ class IsPhoto(BaseFilter):
                 # if last_usage:
                 #     return True
             else:
-                return False
+                try:
+                    amount = int(msg.text[:-1])
+                    return True
+                except Exception as e:
+                    return False
         else:
             return False
 

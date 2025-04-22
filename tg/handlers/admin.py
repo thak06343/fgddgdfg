@@ -5,7 +5,8 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter, Command
 from asgiref.sync import sync_to_async
-from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val
+from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val, \
+    changers_current_balance
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo, Shop, ReqUsage
 from ..text import admin_invoice_text
 
@@ -504,10 +505,12 @@ async def admin_show_balance(msg: Message):
     changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
     text = " "
     for changer in changers:
+        balance, ref_balance = await changers_current_balance(changer)
         total_amount_val, awaiting_usdt = await balance_val(changer)
         text += (f"{changer.username if changer.username else changer.first_name}\n"
                  f"${round(total_amount_val, 2)} на карте\n"
-                 f"{round(awaiting_usdt, 2)} ожидающие платежи\n\n")
+                 f"{round(awaiting_usdt, 2)} ожидающие платежи\n"
+                 f"${round(balance, 2)}Не выведенный баланс\n\n")
     await msg.answer(text)
 
 @router.message(Command("balance"))
@@ -546,12 +549,12 @@ async def admin_del_invoice(call: CallbackQuery):
     invoice = await sync_to_async(Invoice.objects.get)(id=data[3])
     invoice.status = "deleted"
     invoice.save()
-    await call.answer("Инвойс удалён!")
+    await call.answer("Инвойс удалён!", show_alert=True)
 
-@router.callback_query(F.data.startswith("decline_invoice_"))
+@router.callback_query(F.data.startswith("admindecline_invoice_"))
 async def decline_invoice_admin(call: CallbackQuery):
     data = call.data.split("_")
     invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
     invoice.status = "deleted"
     invoice.save()
-    await call.answer("Инвойс удалён!")
+    await call.answer("Инвойс удалён!", show_alert=True)
