@@ -482,9 +482,10 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
                 f"USDT(SHOP) - {invoice.amount_in_usdt}\n"
                 f"operator - {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}\n")
         try:
-            check_msg = await bot.send_photo(chat_id=admin.user_id, photo=last_usage.photo, reply_markup=builder.as_markup(), caption=text)
+            check_msg = await bot.send_photo(chat_id=admin.user_id, photo=last_usage.photo if last_usage.photo else None,
+                                             reply_markup=builder.as_markup(), caption=text)
         except Exception as e:
-            check_msg = await bot.send_document(chat_id=admin.user_id, document=last_usage.photo, reply_markup=builder.as_markup(), caption=text)
+            check_msg = await bot.send_document(chat_id=admin.user_id, document=last_usage.photo if last_usage.photo else None, reply_markup=builder.as_markup(), caption=text)
         await call.answer("Информация отправлена", show_alert=True)
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{invoice.id}"))

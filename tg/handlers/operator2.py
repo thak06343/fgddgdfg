@@ -68,8 +68,6 @@ async def shop_operator_all_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                elif invoice.active:
-                    active_not += "♻️"
                 else:
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT", callback_data=f"shop_operator_invoice_{invoice.id}"))
