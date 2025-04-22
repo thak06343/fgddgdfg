@@ -18,6 +18,7 @@ class TGUser(models.Model):
     prc = models.FloatField(default=4)
     last_active = models.DateTimeField(default=timezone.now, null=True, blank=True)
     inactive_notified = models.BooleanField(default=False)
+    inactive_notified_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.referral_code:

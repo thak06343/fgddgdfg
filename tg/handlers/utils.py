@@ -90,7 +90,6 @@ async def pay_checker(invoice, msg, bot, chat):
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
                 await sync_to_async(new_req_usage.save)()
-
             if invoice.accepted:
                 await msg.answer("✅")
                 new_req_usage.status = "finish"
@@ -187,7 +186,10 @@ async def inactivity_checker(bot):
     while True:
         now = timezone.now()
         inactive_threshold = now - timedelta(minutes=30)
-        users_to_notify = await sync_to_async(TGUser.objects.filter)(last_active__lt=inactive_threshold, is_changer=True)
+        users_to_notify = await sync_to_async(TGUser.objects.filter)(
+            last_active__lt=inactive_threshold,
+            is_changer=True
+        )
 
         for user in users_to_notify:
             try:
@@ -196,16 +198,16 @@ async def inactivity_checker(bot):
                     if not user.inactive_notified:
                         # await bot.send_message(chat_id=user.user_id, text="😴 Мы давно вас не видели, вы с нами?")
                         user.inactive_notified = True
+                        user.inactive_notified_at = now
                         await sync_to_async(user.save)()
-
                     else:
-                        result =  req_inactive(user)
-                        bottom = await changer_panel_bottom(user)
-
-                        await bot.send_message(chat_id=user.user_id, text="✔️ _Вы вышли из режима P2P_", reply_markup=bottom,
-                                                  parse_mode="Markdown")
+                        if user.inactive_notified_at and (now - user.inactive_notified_at) > timedelta(hours=1):
+                            result = req_inactive(user)
+                            user.inactive_notified = False
+                            user.inactive_notified_at = None
+                            await sync_to_async(user.save)()
             except Exception as e:
-                print(f"Ошибка при отправке сообщения {user.user_id}: {e}")
+                print(f"Ошибка при обработке пользователя {user.user_id}: {e}")
         await asyncio.sleep(60)
 
 
