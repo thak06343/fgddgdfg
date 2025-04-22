@@ -24,7 +24,7 @@ class IsKZT(BaseFilter):
                     chat, created = await sync_to_async(OperatorClientChat.objects.get_or_create)(chat_id=msg.chat.id)
                     chat.operator = user
                     await sync_to_async(chat.save)()
-
+                    amount = int(msg.text[:-1])
                     last_usage = await sync_to_async(
                         lambda: ReqUsage.objects.filter(chat=chat).order_by('-date_used').first())()
                     if last_usage:
@@ -39,7 +39,6 @@ class IsKZT(BaseFilter):
             else:
                 return False
         except Exception as e:
-            print(e)
             return False
 
 
