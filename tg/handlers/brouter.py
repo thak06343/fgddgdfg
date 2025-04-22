@@ -7,32 +7,39 @@ from asgiref.sync import sync_to_async
 from .utils import find_req, pay_checker
 from ..models import TGUser, ShopOperator, OperatorClientChat, Course, Invoice, ReqUsage, Country
 from ..text import req_text
+from datetime import timedelta
+from django.utils import timezone
 
 router = Router()
+
 
 class IsKZT(BaseFilter):
     async def __call__(self, msg: Message):
         try:
             text = msg.text.lower()
             if text.endswith("t") or text.endswith("т"):
-                try:
-                    user, created = await sync_to_async(TGUser.objects.get_or_create)(user_id=msg.from_user.id)
-                    shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
-                    if shop_operator:
-                        chat, created = await sync_to_async(OperatorClientChat.objects.get_or_create)(chat_id=msg.chat.id)
-                        chat.operator = user
-                        chat.save()
-                        amount = int(text[:-1])
-                        req_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
-                        if req_usage:
-                            return False
-                        elif not req_usage:
+                user, created = await sync_to_async(TGUser.objects.get_or_create)(user_id=msg.from_user.id)
+                shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
+                if shop_operator:
+                    chat, created = await sync_to_async(OperatorClientChat.objects.get_or_create)(chat_id=msg.chat.id)
+                    chat.operator = user
+                    await sync_to_async(chat.save)()
+
+                    last_usage = await sync_to_async(
+                        lambda: ReqUsage.objects.filter(chat=chat).order_by('-date_used').first())()
+                    if last_usage:
+                        if timezone.now() - last_usage.date_used > timedelta(minutes=10):
                             return True
-                except Exception:
+                        else:
+                            return False
+                    else:
+                        return True
+                else:
                     return False
             else:
                 return False
         except Exception as e:
+            print(e)
             return False
 
 
