@@ -117,8 +117,9 @@ async def send_photo_to_op(msg: Message, bot: Bot):
     if last_usage:
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T)", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
+        builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{last_usage.usage_inv.id}"))
         builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
-        builder.adjust(2)
+        builder.adjust(1)
         if msg.photo:
             file_id = msg.photo[-1].file_id
             check_msg = await bot.send_photo(last_usage.usage_req.user.user_id, file_id, reply_markup=builder.as_markup())

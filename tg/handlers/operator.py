@@ -6,7 +6,7 @@ import aiohttp
 from aiogram import Bot, F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
+from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ReactionTypeEmoji
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
@@ -492,3 +492,52 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
         builder.add(InlineKeyboardButton(text=f"Информация отправлена", callback_data="fdsgfdgdfh"))
         builder.adjust(1)
         await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+class ChangeFiatState(StatesGroup):
+    awaiting_amount = State()
+
+@router.callback_query(F.data.startswith("accept_and_change_fiat_"))
+async def accept_and_change_fiat(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    await state.set_state(ChangeFiatState.awaiting_amount)
+    await state.update_data(invoice_id=data[4])
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="< Отмена", callback_data=f"changer_back_to_accepts_{data[4]}"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("changer_back_to_accepts_"))
+async def changer_back_to_accepts(call: CallbackQuery, state: FSMContext):
+    builder = InlineKeyboardBuilder()
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[4])
+    builder.add(InlineKeyboardButton(text=f"✅ ({invoice.amount_in_kzt}T)",
+                                     callback_data=f"accept_invoice_{invoice.id}"))
+    builder.add(
+        InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice.id}"))
+    builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
+    builder.adjust(1)
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    await state.clear()
+
+@router.message(ChangeFiatState.awaiting_amount)
+async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
+    try:
+        amount = int(msg.text)
+        data = await state.get_data()
+        invoice_id = data.get("invoice_id")
+        invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
+        if amount <= invoice.amount_in_fiat:
+            reaction = ReactionTypeEmoji(emoji="👍")
+            try:
+                await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
+                                                   message_id=msg.message_id)
+            except Exception as e:
+                print(e)
+            invoice.accepted = True
+            invoice.amount_in_fiat = amount
+            invoice.save()
+
+
+
+    except Exception as e:
+        print(e)
