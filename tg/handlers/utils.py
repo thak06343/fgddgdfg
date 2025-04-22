@@ -322,6 +322,7 @@ async def check_invoice(wid, invoice_id, bot):
                             invoices = pack.invoices.all()
                             for invoice in invoices:
                                 invoice.sent_bank = True
+                                invoice.save()
                                 prc = pack.user.prc
                                 balance_plus += invoice.amount_in_usdt_for_changer / 100 * prc
                             await bot.send_message(chat_id=pack.user.user_id, text=f"💸 Баланс пополнен на ${balance_plus}")
