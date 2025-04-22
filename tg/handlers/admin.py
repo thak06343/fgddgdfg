@@ -3,9 +3,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters import Filter
+from aiogram.filters import Filter, Command
 from asgiref.sync import sync_to_async
-from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance
+from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo, Shop, ReqUsage
 from ..text import admin_invoice_text
 
@@ -267,7 +267,9 @@ async def back_to_invoices(call: CallbackQuery):
 
 @router.callback_query(F.data == "admin_all_photo_sent_invoices")
 async def admin_all_invoices(call: CallbackQuery):
-    invoices = await sync_to_async(Invoice.objects.filter)()
+    invoices = await sync_to_async(lambda: Invoice.objects.filter(
+        id__in=ReqUsage.objects.filter(photo__isnull=False).values_list('usage_inv_id', flat=True)
+    ))()
     invoices = invoices.order_by('-date_used')
     if invoices:
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
@@ -489,7 +491,7 @@ async def admin_invoice(call: CallbackQuery):
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
     elif invoice.status == "deleted":
         text += "\n❌ Инвойс удален"
-    req_usages = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
+    req_usages = await sync_to_async(lambda: ReqUsage.objects.filter(usage_inv=invoice, photo__isnull=False))()
     for req_usage in req_usages:
         if req_usage.photo:
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
@@ -497,7 +499,26 @@ async def admin_invoice(call: CallbackQuery):
     builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="back_to_invoices"))
     await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
 
+@router.message(Command("bc"))
+async def admin_show_balance(msg: Message):
+    changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
+    text = " "
+    for changer in changers:
+        total_amount_val, awaiting_usdt = await balance_val(changer)
+        text += (f"{changer.username if changer.username else changer.first_name}\n"
+                 f"${round(total_amount_val, 2)} на карте\n"
+                 f"{round(awaiting_usdt, 2)} ожидающие платежи\n\n")
+    await msg.answer(text)
 
+@router.message(Command("balance"))
+async def balance(msg: Message):
+    shops = await sync_to_async(Shop.objects.all)()
+    text = " "
+    for shop in shops:
+        balance, invs = await shop_balance(shop)
+        text += (f"{shop.name}\n"
+                 f"${round(balance, 2)} {len(invs)}шт\n\n")
+    await msg.answer(text)
 
 @router.callback_query(F.data.startswith("admin_accept_invoice_"))
 async def admin_accept_invoice(call: CallbackQuery):
