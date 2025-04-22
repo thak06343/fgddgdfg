@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
 from django.utils import timezone
-from .utils import shop_balance, get_ltc_usd_rate, transfer_to_shop, PAGE_SIZE, operator_invoices
+from .utils import shop_balance, get_ltc_usd_rate, transfer_to_shop, PAGE_SIZE, operator_invoices, IsLtcReq
 from ..kb import changer_panel_bottom, shop_panel
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Shop, Promo, ShopOperator, ReqUsage
 from ..text import main_page_text, add_new_req_text, settings_text, order_operator_text
@@ -57,22 +57,26 @@ async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
     shop = await sync_to_async(Shop.objects.get)(boss=user)
     try:
         ltc_address = msg.text.strip()
-        balance, invoices = await shop_balance(shop)
-        current_prc = 100 - shop.prc
-        balance = balance / 100 * current_prc
-        try:
-            ltc_usdt_price = await get_ltc_usd_rate()
-        except Exception as e:
-            await msg.answer(f"❌ Не удалось получить курс LTC. Попробуйте позже.\n{e}")
-            return
-        ltc_amount = balance / ltc_usdt_price
-        amount_in_satoshi = int(ltc_amount * 100_000_000)
-        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
-                                                                  ltc_amount=ltc_amount)
-        await sync_to_async(pack.invoices.add)(*invoices)
-        result = await transfer_to_shop(amount_in_satoshi, ltc_address, pack.id)
-        await msg.answer(result)
-        await state.clear()
+        is_ltc_req = await IsLtcReq(ltc_address)
+        if is_ltc_req:
+            balance, invoices = await shop_balance(shop)
+            current_prc = 100 - shop.prc
+            balance = balance / 100 * current_prc
+            try:
+                ltc_usdt_price = await get_ltc_usd_rate()
+            except Exception as e:
+                await msg.answer(f"❌ Не удалось получить курс LTC. Попробуйте позже.\n{e}")
+                return
+            ltc_amount = balance / ltc_usdt_price
+            amount_in_satoshi = int(ltc_amount * 100_000_000)
+            pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
+                                                                      ltc_amount=ltc_amount)
+            await sync_to_async(pack.invoices.add)(*invoices)
+            result = await transfer_to_shop(amount_in_satoshi, ltc_address, pack.id)
+            await msg.answer(result)
+            await state.clear()
+        else:
+            await msg.answer("Неверный LTC адрес, попробуйте еще раз")
     except Exception as e:
         print(e)
 

@@ -1,6 +1,7 @@
 import asyncio
+import re
 
-from aiogram.types import InlineKeyboardButton
+from aiogram.types import InlineKeyboardButton, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import os
 from dotenv import load_dotenv
@@ -8,7 +9,7 @@ load_dotenv()
 import aiohttp
 from aiogram.utils.markdown import hbold
 from aiohttp import ClientConnectorError
-from aiogram.filters import Command
+from aiogram.filters import Command, BaseFilter
 from ..kb import changer_panel_bottom
 from ..models import Req, Invoice, Course, ReqUsage, TGUser, Country, WithdrawalMode, Shop, ShopOperator
 from asgiref.sync import sync_to_async
@@ -536,3 +537,32 @@ async def req_invoices(req):
         list(Invoice.objects.filter(accepted=True, req=req))
     ))()
     return usdt_balance, invoice_list
+
+
+class IsLTCReq(BaseFilter):
+    async def call(self, msg: Message) -> bool:
+        try:
+            if msg.text:
+                req = msg.text
+                traditional_pattern = r'^[L3][A-Za-z0-9]{26,33}$'
+                bech32_pattern = r'^ltc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$'
+                p2sh_pattern = r'^M[A-Za-z0-9]{26,33}$'
+
+                return any([
+                    re.match(traditional_pattern, req),
+                    re.match(bech32_pattern, req),
+                    re.match(p2sh_pattern, req)
+                ])
+        except Exception as e:
+            return False
+
+async def IsLtcReq(req):
+    traditional_pattern = r'^[L3][A-Za-z0-9]{26,33}$'
+    bech32_pattern = r'^ltc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$'
+    p2sh_pattern = r'^M[A-Za-z0-9]{26,33}$'
+
+    return any([
+        re.match(traditional_pattern, req),
+        re.match(bech32_pattern, req),
+        re.match(p2sh_pattern, req)
+    ])

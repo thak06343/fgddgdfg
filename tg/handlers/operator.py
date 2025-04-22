@@ -13,7 +13,7 @@ from asgiref.sync import sync_to_async
 from aiogram.utils.markdown import hbold, hitalic, hcode
 from .utils import changers_current_balance, balance_val, get_totals_reqs, req_adder, create_ltc_invoice, \
     check_invoice, create_limit_invoice, check_limit_invoice, get_ltc_usd_rate, transfer, changer_balance_with_invoices, \
-    req_invoices
+    req_invoices, IsLtcReq
 from ..kb import changer_panel_bottom
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, ReqUsage
 from ..text import main_page_text, add_new_req_text, settings_text, shop_stats_text
@@ -81,32 +81,35 @@ async def take_zp_ltc(call: CallbackQuery, state: FSMContext):
 @router.message(WithdrawToChangerState.awaiting_ltc_req)
 async def withdraw_to_changer(msg: Message, state: FSMContext):
     try:
-        user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
-        ltc_address = msg.text.strip()
-        main_balance, main_invs, ref_balance, ref_invs = await changer_balance_with_invoices(user)
-        return
-        balance = main_balance + ref_balance
-        if balance  < 10:
-            await msg.answer("Недостаточный баланс! Вывод от 10$")
-            return
+        is_ltc_req = await IsLtcReq(msg.text)
+        if is_ltc_req:
+            user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
+            ltc_address = msg.text.strip()
+            main_balance, main_invs, ref_balance, ref_invs = await changer_balance_with_invoices(user)
+            balance = main_balance + ref_balance
+            if balance  < 10:
+                await msg.answer("Недостаточный баланс! Вывод от 10$")
+                return
 
-        try:
-            ltc_usdt_price = await get_ltc_usd_rate()
-        except Exception as e:
-            await msg.answer(f"❌ Не удалось получить курс LTC. Попробуйте позже.\n{e}")
-            return
+            try:
+                ltc_usdt_price = await get_ltc_usd_rate()
+            except Exception as e:
+                await msg.answer(f"❌ Не удалось получить курс LTC. Попробуйте позже.\n{e}")
+                return
 
-        ltc_amount = balance / ltc_usdt_price
-        amount_in_satoshi = int(ltc_amount * 100_000_000)
-        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount)
-        for main_inv in main_invs:
-            print(main_inv.id)
-            pack.invoices.add(main_inv)
+            ltc_amount = balance / ltc_usdt_price
+            amount_in_satoshi = int(ltc_amount * 100_000_000)
+            pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount)
+            for main_inv in main_invs:
+                print(main_inv.id)
+                pack.invoices.add(main_inv)
 
-        await sync_to_async(pack.ref_invoices.add)(*ref_invs)
-        result = await transfer(amount_in_satoshi, ltc_address, pack.id)
-        await msg.answer(result, parse_mode="Markdown")
-        await state.clear()
+            await sync_to_async(pack.ref_invoices.add)(*ref_invs)
+            result = await transfer(amount_in_satoshi, ltc_address, pack.id)
+            await msg.answer(result, parse_mode="Markdown")
+            await state.clear()
+        else:
+            await msg.answer("Неверный LTC адрес, попробуйте еще раз")
     except Exception as e:
         print(e)
 
@@ -128,9 +131,12 @@ async def add_new_req(call: CallbackQuery, state: FSMContext):
 async def awaiting_cart(msg: Message, state: FSMContext):
     try:
         cart = msg.text.strip()
-        await state.update_data(cart=cart)
-        await msg.answer("Укажите имя фамилию на латинице, указанное на карте: ")
-        await state.set_state(AddReqState.awaiting_name)
+        if len(cart) == 16:
+            await state.update_data(cart=cart)
+            await msg.answer("Укажите имя фамилию на латинице, указанное на карте: ")
+            await state.set_state(AddReqState.awaiting_name)
+        else:
+            await msg.answer("Попробуйте еще раз!\n\nНапример: _хххх хххх хххх хххх_", parse_mode="Markdown")
     except Exception as e:
         print(e)
 
