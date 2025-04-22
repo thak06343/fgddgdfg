@@ -197,9 +197,13 @@ async def inactivity_checker(bot):
                         # await bot.send_message(chat_id=user.user_id, text="😴 Мы давно вас не видели, вы с нами?")
                         user.inactive_notified = True
                         await sync_to_async(user.save)()
+
                     else:
                         result =  req_inactive(user)
+                        bottom = await changer_panel_bottom(user)
 
+                        await bot.send_message(chat_id=user.user_id, text="✔️ _Вы вышли из режима P2P_", reply_markup=bottom,
+                                                  parse_mode="Markdown")
             except Exception as e:
                 print(f"Ошибка при отправке сообщения {user.user_id}: {e}")
         await asyncio.sleep(60)

@@ -470,8 +470,8 @@ async def admin_invoice(call: CallbackQuery):
     data = call.data.split("_")
     invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
     text = admin_invoice_text.format(operator=invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name,
-                                     shop=invoice.shop.name.upper(), amount=invoice.amount_in_kzt, date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
-                                     amount_kgs=invoice.amount_in_fiat, amount_usdt=invoice.amount_in_usdt_for_changer)
+                                     shop=invoice.shop.name.upper(), amount=round(invoice.amount_in_kzt, 2), date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
+                                     amount_kgs=round(invoice.amount_in_fiat, 2), amount_usdt=round(invoice.amount_in_usdt_for_changer, 2))
     builder = InlineKeyboardBuilder()
     if invoice.status != "deleted" and not invoice.accepted:
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))

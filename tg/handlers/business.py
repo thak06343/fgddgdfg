@@ -177,8 +177,6 @@ async def all_shop_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                elif invoice.active:
-                    active_not += "♻️"
                 else:
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(
@@ -274,7 +272,7 @@ async def my_operators(call: CallbackQuery):
     builder.row(InlineKeyboardButton(text="🔱 Все инвойсы", callback_data="business_all_invoices"))
     text = " "
     for operator in operators:
-        balance, invoices = await operator_invoices(operator)
+        balance, invoices = await operator_invoices(operator.operator)
         text += (f"{operator.username if operator.username else f'{operator.first_name} {operator.last_name}'}\n"
                  f"За все время: {round(balance, 2)} (кол-во: {len(invoices)})\n\n")
         builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_{operator.id}"))
