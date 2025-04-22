@@ -14,7 +14,7 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Req)
 class ReqAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'user', 'active', 'archived', 'cart']
 
 @admin.register(ReqUsage)
 class ReqUsageAdmin(admin.ModelAdmin):
@@ -26,16 +26,16 @@ class OperatorClientChatAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'shop']
 
 
 @admin.register(ShopOperator)
 class ShopOperatorAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'shop', 'operator']
 
 @admin.register(Shop)
 class ShopAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'name', 'boss']
 
 @admin.register(Promo)
 class PromoAdmin(admin.ModelAdmin):
@@ -43,7 +43,7 @@ class PromoAdmin(admin.ModelAdmin):
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
-    list_display = ['id']
+    list_display = ['id', 'country', 'flag']
 
 @admin.register(WithdrawalMode)
 class WithdrawalModeAdmin(admin.ModelAdmin):
