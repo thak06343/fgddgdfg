@@ -418,13 +418,12 @@ async def transfer(satoshi, ltc_req, wid):
                     for i in invoices:
                         print("in SENT CHANGER")
                         i.sent_changer = True
-                        print(i.sent_changer)
                         await sync_to_async(i.save)()
                 ref_invoices = pack.ref_invoices.all()
                 if ref_invoices:
                     for i in ref_invoices:
                         i.sent_ref = True
-                        await sync_to_async(i.save)()
+                        i.save()
                 pack.finish = True
                 pack.active = False
                 pack.save()
@@ -462,7 +461,7 @@ async def transfer_to_shop(satoshi, ltc_req, wid):
                 if invoices:
                     for i in invoices:
                         i.sent_shop = True
-                        await sync_to_async(i.save)()
+                        i.save()
                 pack.active = False
                 pack.finish = True
                 pack.save()
@@ -499,10 +498,11 @@ async def transfer_to_admin(satoshi, ltc_req, wid):
                 if invoices:
                     for i in invoices:
                         i.sent_admin = True
-                        await sync_to_async(i.save)()
+                        i.save()
                 pack.active = False
                 pack.finish = True
                 pack.save()
+                result = await format_transfer_result(result)
                 return result
             else:
                 pack.active = False
@@ -576,3 +576,9 @@ async def IsLtcReq(req):
         re.match(bech32_pattern, req),
         re.match(p2sh_pattern, req)
     ])
+
+async def operator_mode_invoice_balances(invoices):
+    balance = 0
+    for inv in invoices:
+        balance += inv.amount_in_usdt
+    return round(balance, 2)

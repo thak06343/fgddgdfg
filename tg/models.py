@@ -164,6 +164,8 @@ class AnotherReq(models.Model):
     one_time_req = models.BooleanField(default=False, null=True, blank=True)
 
 class OperatorMode(models.Model):
-    invoices = models.ManyToManyField(Invoice, related_name="mode_invoices", blank=True, null=True)
+    invoices = models.ManyToManyField(Invoice, related_name="md_invoices", blank=True)
     active = models.BooleanField(default=True)
-    req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True, related_name="mode_reqs")
+    req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True, related_name="md_reqs")
+    max_amount = models.FloatField(null=True, blank=True)
+    current_amount = models.FloatField(default=0)

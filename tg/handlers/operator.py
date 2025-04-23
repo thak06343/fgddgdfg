@@ -13,9 +13,9 @@ from asgiref.sync import sync_to_async
 from aiogram.utils.markdown import hbold, hitalic, hcode
 from .utils import changers_current_balance, balance_val, get_totals_reqs, req_adder, create_ltc_invoice, \
     check_invoice, create_limit_invoice, check_limit_invoice, get_ltc_usd_rate, transfer, changer_balance_with_invoices, \
-    req_invoices, IsLtcReq
+    req_invoices, IsLtcReq, operator_mode_invoice_balances
 from ..kb import changer_panel_bottom
-from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, ReqUsage
+from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, ReqUsage, OperatorMode
 from ..text import main_page_text, add_new_req_text, settings_text, shop_stats_text
 from django.db.models import Sum, Count, Q, FloatField
 from django.db.models.functions import Coalesce
@@ -566,5 +566,49 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
             invoice.amount_in_usdt_for_changer = usdt_for_changer
             invoice.save()
         await state.clear()
+    except Exception as e:
+        print(e)
+
+class OperatorModeState(StatesGroup):
+    awaiting_amount = State()
+
+@router.callback_query(F.data.startswith("in_mode_accept_"))
+async def in_mode_accept(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    await state.update_data(invoice_id=data[3], check_chat_id=data[4], check_message_id=data[5], operator_mode_id=data[6])
+    await state.set_state(OperatorModeState.awaiting_amount)
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="✅", callback_data="fdgdfh"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.message(OperatorModeState.awaiting_amount)
+async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
+    try:
+        int(msg.text)
+        data = await state.get_data()
+        invoice_id = data.get("invoice_id")
+        check_chat_id = data.get("check_chat_id")
+        check_message_id = data.get("check_message_id")
+        operator_mode_id = data.get("operator_mode_id")
+        operator_mode = await sync_to_async(OperatorMode.objects.get)(id=operator_mode_id)
+        reaction = ReactionTypeEmoji(emoji="👍")
+        try:
+            await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
+                                           message_id=msg.message_id)
+        except Exception as e:
+            print(e)
+        invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
+        invoice.amount_in_fiat = int(msg.text)
+        invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
+        invoice.amount_in_usdt_for_changer = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt
+        invoice.amount_in_usdt = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt_for_shop
+        operator_mode.invoices.add(invoice)
+        invoice.save()
+        await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${invoice.amount_in_usdt}")
+        all_current_invoices = operator_mode.invoices.all()
+        balance = await operator_mode_invoice_balances(all_current_invoices)
+        if balance >= operator_mode.max_amount:
+            await bot.send_message(chat_id=check_chat_id, text=f"Вы достигли лимита, отправьте незавершенные платежи и завершите режим!\nЛимит: ${operator_mode.max_amount}\n"
+                                                               f"Использовано: ${balance}")
     except Exception as e:
         print(e)

@@ -130,66 +130,66 @@ class OperatorModeState(StatesGroup):
     awaiting_amount = State()
     in_mode = State()
 
-# @router.message(F.text == "🕹 Режим платежей")
-# async def shop_operator_mode(msg: Message, state: FSMContext):
-#     usdt_amount = 200
-#     req = await find_req(usdt_amount)
-#     if not req:
-#         usdt_amount = 100
-#         req = await find_req(usdt_amount)
-#     if req:
-#         text = f"Реквизиты меняются каждые ${usdt_amount}!\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
-#         text2 = (f"{req.name}\n"
-#                  f"{req.flag} {req.cart}")
-#         await state.set_state(OperatorModeState.in_mode)
-#         shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
-#                                                     keyboard=[
-#                                                         [KeyboardButton(text="Выйти из режима")],
-#                                                     ])
-#         user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
-#         shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
-#         new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req)
-#         new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=req, status="in_operator_mode")
-#         await state.update_data(mode_id=new_operator_mode.id, usage_id=new_usage.id, shop_id=shop_operator.shop.id)
-#         await msg.answer(text, reply_markup=shop_operator_bottoms)
-#         await msg.answer(text2)
+@router.message(F.text == "🕹 Режим платежей")
+async def shop_operator_mode(msg: Message, state: FSMContext):
+    usdt_amount = 200
+    req = await find_req(usdt_amount)
+    if not req:
+        usdt_amount = 100
+        req = await find_req(usdt_amount)
+    if req:
+        text = f"Реквизиты меняются каждые ${usdt_amount}\n❗️ Не выходите из режима пока не отправите все чеки!\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
+        text2 = (f"{req.name}\n"
+                 f"{req.flag} {req.cart}")
+        await state.set_state(OperatorModeState.in_mode)
+        shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
+                                                    keyboard=[
+                                                        [KeyboardButton(text="Выйти из режима")],
+                                                    ])
+        user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
+        shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
+        new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
+        new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=req, status="in_operator_mode")
+        await state.update_data(mode_id=new_operator_mode.id, usage_id=new_usage.id, shop_id=shop_operator.shop.id)
+        await msg.answer(text, reply_markup=shop_operator_bottoms)
+        await msg.answer(text2)
 
 
 
-# @router.message(OperatorModeState.in_mode)
-# async def in_mode(msg: Message, state: FSMContext, bot: Bot):
-#     data = await state.get_data()
-#     mode_id = data.get("mode_id")
-#     usage_id = data.get("usage_id")
-#     shop_id = data.get("shop_id")
-#     shop = await sync_to_async(Shop.objects.get)(id=shop_id)
-#     operator_mode = await sync_to_async(OperatorMode.objects.get)(id=mode_id)
-#     usage = await sync_to_async(ReqUsage.objects.get)(id=usage_id)
-#     req = usage.req
-#     if msg.text == "Выйти из режима":
-#         await state.clear()
-#         shop_operator_markup = await shop_operator_panel()
-#         operator_mode.active = False
-#         operator_mode.save()
-#         usage.active = False
-#         usage.save()
-#         await msg.answer("Вы вышли из режима", reply_markup=shop_operator_markup)
-#     else:
-#         if msg.photo or msg.document:
-#             builder = InlineKeyboardBuilder()
-#             short_name = req.name[:3].upper()
-#             last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
-#             new_invoice = await sync_to_async(Invoice.objects.create)(req=req)
-#             builder.add(InlineKeyboardButton(text=f"✅ {short_name} *{last_digits}",callback_data=f"in_mode_accept_{new_invoice.id}"))
-#             builder.add(InlineKeyboardButton(text=f"✍️ Др сумма",callback_data=f"accept_and_change_fiat_{last_usage.usage_inv.id}"))
-#             builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
-#             builder.adjust(1)
-#             if msg.photo:
-#                 file_id = msg.photo[-1].file_id
-#                 check_msg = await bot.send_photo(last_usage.usage_req.user.user_id, file_id,
-#                                                  reply_markup=builder.as_markup())
-#             else:
-#                 file_id = msg.document.file_id
-#                 check_msg = await bot.send_document(last_usage.usage_req.user.user_id, file_id,
-#                                                     reply_markup=builder.as_markup())
+@router.message(OperatorModeState.in_mode)
+async def in_mode(msg: Message, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    mode_id = data.get("mode_id")
+    usage_id = data.get("usage_id")
+    shop_id = data.get("shop_id")
+    shop = await sync_to_async(Shop.objects.get)(id=shop_id)
+    operator_mode = await sync_to_async(OperatorMode.objects.get)(id=mode_id)
+    usage = await sync_to_async(ReqUsage.objects.get)(id=usage_id)
+    req = usage.req
+    if msg.text == "Выйти из режима":
+        await state.clear()
+        shop_operator_markup = await shop_operator_panel()
+        operator_mode.active = False
+        operator_mode.save()
+        usage.active = False
+        usage.save()
+        await msg.answer("Вы вышли из режима", reply_markup=shop_operator_markup)
+    else:
+        if msg.photo or msg.document:
+            builder = InlineKeyboardBuilder()
+            short_name = req.name[:3].upper()
+            last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
+            new_invoice = await sync_to_async(Invoice.objects.create)(req=req)
+            check_msg = await msg.answer("♻️ На обработке")
+            builder.add(InlineKeyboardButton(text=f"✅ {short_name} *{last_digits}",callback_data=f"in_mode_accept_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
+            builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}"))
+            builder.adjust(1)
+            if msg.photo:
+                file_id = msg.photo[-1].file_id
+                check_msg = await bot.send_photo(req.user.user_id, file_id,
+                                                 reply_markup=builder.as_markup())
+            else:
+                file_id = msg.document.file_id
+                check_msg = await bot.send_document(req.user.user_id, file_id,
+                                                    reply_markup=builder.as_markup())
 
