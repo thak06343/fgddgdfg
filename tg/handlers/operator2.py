@@ -186,10 +186,10 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
             builder.adjust(1)
             if msg.photo:
                 file_id = msg.photo[-1].file_id
-                check_msg = await bot.send_photo(req.user.user_id, file_id,
+                await bot.send_photo(req.user.user_id, file_id,
                                                  reply_markup=builder.as_markup())
             else:
                 file_id = msg.document.file_id
-                check_msg = await bot.send_document(req.user.user_id, file_id,
+                await bot.send_document(req.user.user_id, file_id,
                                                     reply_markup=builder.as_markup())
 
