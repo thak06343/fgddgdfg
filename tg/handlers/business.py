@@ -152,7 +152,7 @@ async def shop_statistics(msg: Message):
 async def all_shop_invoices(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop = await sync_to_async(Shop.objects.get)(boss=user)
-    invoices = await sync_to_async(lambda: Invoice.objects.filter(shop=shop).order_by('-id'))()
+    invoices = await sync_to_async(Invoice.objects.filter)(shop=shop)
     if invoices:
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
         page_number = 1
@@ -285,6 +285,8 @@ async def my_operators(call: CallbackQuery):
                  f"За все время: {round(balance, 2)} (кол-во: {len(invoices)})\n\n")
         builder.add(InlineKeyboardButton(text=f"{operator.username if operator.username else operator.first_name}", callback_data=f"business_op_invoices_{operator.id}"))
     builder.adjust(2)
+    if not text:
+        text = "Нет операторов"
     await call.message.edit_text(text, reply_markup=builder.as_markup())
 
 @router.callback_query(F.data == "add_new_shop_operator")

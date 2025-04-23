@@ -41,7 +41,7 @@ async def shop_operator_invoices(msg: Message):
 async def shop_operator_all_invoices(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
-    invoices = await sync_to_async(lambda: Invoice.objects.filter(requsage__chat__operator=user).distinct().order_by('-date_used'))()
+    invoices = await sync_to_async(lambda: Invoice.objects.filter(shop=shop_operator.shop).distinct().order_by('-date_used'))()
     if invoices:
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
         page_number = 1
@@ -140,7 +140,7 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
     if req:
         text = f"Реквизиты меняются каждые ${usdt_amount}\n❗️ Не выходите из режима пока не отправите все чеки!\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
         text2 = (f"{req.name}\n"
-                 f"{req.flag} {req.cart}")
+                 f"{req.country.flag} {req.cart}")
         await state.set_state(OperatorModeState.in_mode)
         shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
                                                     keyboard=[

@@ -254,7 +254,7 @@ async def admin_new_shop_promo(call: CallbackQuery, bot: Bot):
 async def admin_all_invoices(msg: Message):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Операторы", callback_data="admin_all_changers"))
-    builder.add(InlineKeyboardButton(text="Магазины", callback_data="admin_all_shops"))
+    builder.add(InlineKeyboardButton(text="Магазины", callback_data="admin_all_shops_invoices"))
     builder.add(InlineKeyboardButton(text="Все", callback_data="admin_all_invoices"))
     builder.add(InlineKeyboardButton(text="Принятые", callback_data="admin_all_accepted_invoices"))
     builder.add(InlineKeyboardButton(text="Просроченные", callback_data="admin_all_expired_invoices"))
@@ -262,14 +262,14 @@ async def admin_all_invoices(msg: Message):
     builder.adjust(1)
     await msg.answer("123", reply_markup=builder.as_markup())
 
-@router.callback_query(F.data == "admin_all_shops")
+@router.callback_query(F.data == "admin_all_shops_invoices")
 async def admin_all_shops(call: CallbackQuery):
     shops = await sync_to_async(Shop.objects.all)()
     builder = InlineKeyboardBuilder()
     for shop in shops:
         builder.add(InlineKeyboardButton(text=f"{shop.name}", callback_data=f"admin_show_shop_invoices_{shop.id}"))
     builder.adjust(2)
-    builder.add(InlineKeyboardButton(text="< Назад", callback_data="back_to_invoices"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_invoices"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("admin_show_shop_invoices_"))
