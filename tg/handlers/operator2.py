@@ -21,6 +21,9 @@ class IsOperFilter(Filter):
             if shop_operator:
                 return True
             else:
+                shop = await sync_to_async(Shop.objects.filter)(boss=user)
+                if shop:
+                    return True
                 return False
         except Exception as e:
             return False
@@ -41,28 +44,32 @@ async def shop_operator_invoices(msg: Message):
 async def shop_operator_all_invoices(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
-    invoices = await sync_to_async(lambda: Invoice.objects.filter(shop=shop_operator.shop).distinct().order_by('-date_used'))()
+    invoices = await sync_to_async(lambda: Invoice.objects.filter(shop=shop_operator.shop, shop_operator=shop_operator).distinct().order_by('-date_used'))()
     if invoices:
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
         page_number = 1
 
         @router.callback_query(F.data.startswith("next_page_"))
-        async def next_page(call: CallbackQuery):
-            page_number = int(call.data.split("_")[2]) + 1
-            if page_number > total_pages:
-                page_number = total_pages
+        async def handle_next_page(call: CallbackQuery):
+            current_page = int(call.data.split("_")[2])
+            page_number = min(current_page + 1, total_pages)
             await send_invoices_page(call, page_number, total_pages)
 
         @router.callback_query(F.data.startswith("prev_page_"))
-        async def next_page(call: CallbackQuery):
-            page_number = int(call.data.split("_")[2]) - 1
-            if page_number > 1:
-                page_number = 1
+        async def handle_prev_page(call: CallbackQuery):
+            current_page = int(call.data.split("_")[2])
+            page_number = max(current_page - 1, 1)
             await send_invoices_page(call, page_number, total_pages)
 
         async def send_invoices_page(call, page_number, total_pages):
+            page_number = max(1, page_number)
             start_index = (page_number - 1) * PAGE_SIZE
             end_index = min(start_index + PAGE_SIZE, len(invoices))
+
+            if start_index >= len(invoices):
+                await call.answer("Страница не найдена.")
+                return
+
             inv_page = invoices[start_index:end_index]
 
             builder = InlineKeyboardBuilder()
@@ -149,8 +156,7 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
         user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
         shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user, active=True)
         new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
-        new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=req, status="in_operator_mode")
-        await state.update_data(mode_id=new_operator_mode.id, usage_id=new_usage.id, shop_id=shop_operator.shop.id)
+        await state.update_data(mode_id=new_operator_mode.id, shop_id=shop_operator.shop.id, req=req.id)
         await msg.answer(text, reply_markup=shop_operator_bottoms)
         await msg.answer(text2)
 
@@ -159,20 +165,17 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
 @router.message(OperatorModeState.in_mode)
 async def in_mode(msg: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
+    req_id = data.get("req_id")
     mode_id = data.get("mode_id")
-    usage_id = data.get("usage_id")
     shop_id = data.get("shop_id")
+    req = await sync_to_async(Req.objects.get)(id=int(req_id))
     shop = await sync_to_async(Shop.objects.get)(id=int(shop_id))
     operator_mode = await sync_to_async(OperatorMode.objects.get)(id=int(mode_id))
-    usage = await sync_to_async(ReqUsage.objects.get)(id=int(usage_id))
-    req = usage.req
     if msg.text == "Выйти из режима":
         await state.clear()
         shop_operator_markup = await shop_operator_panel()
         operator_mode.active = False
         operator_mode.save()
-        usage.active = False
-        usage.save()
         await msg.answer("Вы вышли из режима", reply_markup=shop_operator_markup)
     else:
         if msg.photo or msg.document:
@@ -180,7 +183,9 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
             short_name = req.name[:3].upper()
             last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
             new_invoice = await sync_to_async(Invoice.objects.create)(req=req, shop=shop)
+
             check_msg = await msg.reply("♻️ На обработке")
+
             builder.add(InlineKeyboardButton(text=f"✅ {short_name} *{last_digits}",callback_data=f"in_mode_accept_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
             builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}"))
             builder.adjust(1)
@@ -192,4 +197,6 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
                 file_id = msg.document.file_id
                 await bot.send_document(req.user.user_id, file_id,
                                                     reply_markup=builder.as_markup())
-
+            new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=new_invoice,
+                                                                     status="in_operator_mode",
+                                                                     active=False, usage_req=req, photo=file_id)

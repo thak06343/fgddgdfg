@@ -58,6 +58,8 @@ class IsPhoto(BaseFilter):
                 last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
                 if last_usage:
                     return True
+                else:
+                    return False
             else:
                 return False
         else:
@@ -83,7 +85,7 @@ async def kzt_answer(msg: Message, bot: Bot):
                 usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
                 new_invoice = await sync_to_async(Invoice.objects.create)(
                     req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
-                    amount_in_usdt_for_changer=usdt_for_changer, shop=shop_operator.shop)
+                    amount_in_usdt_for_changer=usdt_for_changer, shop=shop_operator.shop, shop_operator=shop_operator)
                 text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart)
                 if req.cart.startswith("9"):
                     text += "\nПереводы только с Каспи\n"

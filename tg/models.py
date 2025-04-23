@@ -99,6 +99,7 @@ class Invoice(models.Model):
     sent_admin = models.BooleanField(default=False)
     status = models.CharField(max_length=255, null=True, blank=True)
     shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, null=True, blank=True)
+    shop_operator = models.ForeignKey(ShopOperator, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"{self.req} {self.amount_in_usdt} {self.status} {self.accepted}"
@@ -169,3 +170,6 @@ class OperatorMode(models.Model):
     req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True, related_name="md_reqs")
     max_amount = models.FloatField(null=True, blank=True)
     current_amount = models.FloatField(default=0)
+
+class ApiAccount(models.Model):
+    account = models.CharField(max_length=255, null=True, blank=True)

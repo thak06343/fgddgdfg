@@ -11,7 +11,7 @@ from aiogram.utils.markdown import hbold
 from aiohttp import ClientConnectorError
 from aiogram.filters import Command, BaseFilter
 from ..kb import changer_panel_bottom
-from ..models import Req, Invoice, Course, ReqUsage, TGUser, Country, WithdrawalMode, Shop, ShopOperator
+from ..models import Req, Invoice, Course, ReqUsage, TGUser, Country, WithdrawalMode, Shop, ShopOperator, ApiAccount
 from asgiref.sync import sync_to_async
 from django.db.models.functions import Coalesce
 from django.db.models import Sum, Count, F, Q, FloatField
@@ -249,6 +249,13 @@ async def get_ltc_usd_rate():
 
 async def create_ltc_invoice(amount_usd):
     account = os.getenv("APIRONE_ACC")
+    try:
+        account2 = await sync_to_async(ApiAccount.objects.all)()
+        if account2:
+            account2 = account2.first()
+            account = choose_ltc_account(account, account2.account)
+    except Exception as e:
+        print(e)
     create_invoice_url = f'https://apirone.com/api/v2/accounts/{account}/invoices'
 
     course = await get_ltc_usd_rate()
@@ -291,7 +298,6 @@ async def create_limit_invoice():
         invoice_data = {
             "amount": amount_in_microunits,
             "currency": "ltc",
-            "lifetime": 43200,
             "lifetime": 43200,
             "callback_url": "http://example.com/callback",
         }
@@ -549,24 +555,6 @@ async def req_invoices(req):
     ))()
     return usdt_balance, invoice_list
 
-
-class IsLTCReq(BaseFilter):
-    async def call(self, msg: Message) -> bool:
-        try:
-            if msg.text:
-                req = msg.text
-                traditional_pattern = r'^[L3][A-Za-z0-9]{26,33}$'
-                bech32_pattern = r'^ltc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$'
-                p2sh_pattern = r'^M[A-Za-z0-9]{26,33}$'
-
-                return any([
-                    re.match(traditional_pattern, req),
-                    re.match(bech32_pattern, req),
-                    re.match(p2sh_pattern, req)
-                ])
-        except Exception as e:
-            return False
-
 async def IsLtcReq(req):
     traditional_pattern = r'^[L3][A-Za-z0-9]{26,33}$'
     bech32_pattern = r'^ltc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{39,59}$'
@@ -583,3 +571,21 @@ async def operator_mode_invoice_balances(invoices):
     for inv in invoices:
         balance += inv.amount_in_usdt
     return round(balance, 2)
+
+async def choose_ltc_account(account1, account2):
+    currency = "ltc"
+    API_URL = "https://apirone.com/api/v2/accounts/{account}/balance"
+
+    async with aiohttp.ClientSession() as session:
+        async def get_balance(account):
+            url = API_URL.format(account=account)
+            params = {"currency": currency}
+            async with session.get(url, params=params) as resp:
+                data = await resp.json()
+                balance_info = next((item for item in data["balance"] if item["currency"] == currency), None)
+                return balance_info["available"] if balance_info else 0
+
+        balance1 = await get_balance(account1)
+        balance2 = await get_balance(account2)
+
+        return account2 if balance2 < balance1 * 0.06 else account1

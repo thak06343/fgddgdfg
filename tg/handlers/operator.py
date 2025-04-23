@@ -109,7 +109,8 @@ async def withdraw_to_changer(msg: Message, state: FSMContext):
             await msg.answer(result, parse_mode="Markdown")
             await state.clear()
         else:
-            await msg.answer("Неверный LTC адрес, попробуйте еще раз")
+            await msg.answer("Неверный LTC адрес, попробуйте заново")
+            await state.clear()
     except Exception as e:
         print(e)
 
@@ -487,8 +488,8 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     last_usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="✅", callback_data=f"admin_accept_invoice_{last_usage.usage_inv.id}"))
-    builder.add(InlineKeyboardButton(text="❌", callback_data=f"admindecline_invoice_{last_usage.usage_inv.id}"))
+    builder.add(InlineKeyboardButton(text="✅", callback_data=f"admin_accept_invoice_{last_usage.usage_inv.id}_{last_usage.id}"))
+    builder.add(InlineKeyboardButton(text="❌", callback_data=f"admindecline_invoice_{last_usage.usage_inv.id}_{last_usage.id}"))
     if user.is_admin:
         builder.adjust(2)
     else:
@@ -518,11 +519,15 @@ class ChangeFiatState(StatesGroup):
 @router.callback_query(F.data.startswith("accept_and_change_fiat_"))
 async def accept_and_change_fiat(call: CallbackQuery, state: FSMContext):
     data = call.data.split("_")
-    await state.set_state(ChangeFiatState.awaiting_amount)
-    await state.update_data(invoice_id=data[4])
-    builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="< Отмена", callback_data=f"changer_back_to_accepts_{data[4]}"))
-    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[4])
+    if not invoice.accepted:
+        await state.set_state(ChangeFiatState.awaiting_amount)
+        await state.update_data(invoice_id=data[4])
+        builder = InlineKeyboardBuilder()
+        builder.add(InlineKeyboardButton(text="< Отмена", callback_data=f"changer_back_to_accepts_{data[4]}"))
+        await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    else:
+        await call.answer("Инвойс уже принят")
 
 @router.callback_query(F.data.startswith("changer_back_to_accepts_"))
 async def changer_back_to_accepts(call: CallbackQuery, state: FSMContext):
@@ -545,7 +550,7 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
         data = await state.get_data()
         invoice_id = data.get("invoice_id")
         invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
-        if amount <= invoice.amount_in_fiat:
+        if not invoice.accepted:
             reaction = ReactionTypeEmoji(emoji="👍")
             try:
                 await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
@@ -579,7 +584,8 @@ async def in_mode_accept(call: CallbackQuery, state: FSMContext):
     await state.update_data(invoice_id=data[3], check_chat_id=data[4], check_message_id=data[5], operator_mode_id=data[6])
     await state.set_state(OperatorModeState.awaiting_amount)
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="✅", callback_data="fdgdfh"))
+    builder.add(InlineKeyboardButton(text="✅", callback_data=f"{call.data}"))
+    await call.message.answer(f"Укажите сколько пришло:")
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.message(OperatorModeState.awaiting_amount)
@@ -587,29 +593,28 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
     try:
         int(msg.text)
         data = await state.get_data()
-        invoice_id = data.get("invoice_id")
+        invoice_id = int(data.get("invoice_id"))
         check_chat_id = data.get("check_chat_id")
-        check_message_id = data.get("check_message_id")
-        operator_mode_id = data.get("operator_mode_id")
+        check_message_id = int(data.get("check_message_id"))
+        operator_mode_id = int(data.get("operator_mode_id"))
         operator_mode = await sync_to_async(OperatorMode.objects.get)(id=operator_mode_id)
         reaction = ReactionTypeEmoji(emoji="👍")
-        try:
-            await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
-                                           message_id=msg.message_id)
-        except Exception as e:
-            print(e)
         invoice = await sync_to_async(Invoice.objects.get)(id=int(invoice_id))
-        invoice.amount_in_fiat = int(msg.text)
-        invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
-        invoice.amount_in_usdt_for_changer = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt
-        invoice.amount_in_usdt = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt_for_shop
-        operator_mode.invoices.add(invoice)
-        invoice.save()
-        await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${invoice.amount_in_usdt}")
-        all_current_invoices = operator_mode.invoices.all()
-        balance = await operator_mode_invoice_balances(all_current_invoices)
-        if balance >= operator_mode.max_amount:
-            await bot.send_message(chat_id=check_chat_id, text=f"Вы достигли лимита, отправьте незавершенные платежи и завершите режим!\nЛимит: ${operator_mode.max_amount}\n"
-                                                               f"Использовано: ${balance}")
+        if not invoice.accepted:
+            invoice.amount_in_fiat = int(msg.text)
+            invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
+            invoice.amount_in_usdt_for_changer = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt
+            invoice.amount_in_usdt = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt_for_shop
+            operator_mode.invoices.add(invoice)
+            invoice.save()
+            all_current_invoices = operator_mode.invoices.all()
+            balance = await operator_mode_invoice_balances(all_current_invoices)
+            await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${invoice.amount_in_usdt} (${int(balance)})")
+            try:
+                await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
+                                               message_id=msg.message_id)
+            except Exception as e:
+                print(e)
+        await state.clear()
     except Exception as e:
         print(e)
