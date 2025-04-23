@@ -226,7 +226,7 @@ async def admin_show_shop(call: CallbackQuery):
 
 @router.callback_query(F.data.startswith("admin_shop_operator_promo_"))
 async def admin_shop_operator_promo(call: CallbackQuery, bot: Bot):
-    data = call.data.split()
+    data = call.data.split("_")
     shop = await sync_to_async(Shop.objects.get)(id=data[4])
     new_operator_promo = await sync_to_async(Promo.objects.create)(type="new_shop_operator", shop=shop)
     bot_info = await bot.get_me()

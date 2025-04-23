@@ -85,8 +85,8 @@ class OperatorClientChat(models.Model):
 
 class Invoice(models.Model):
     req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True)
-    amount_in_kzt = models.PositiveIntegerField()
-    amount_in_usdt = models.FloatField()
+    amount_in_kzt = models.PositiveIntegerField(null=True, blank=True)
+    amount_in_usdt = models.FloatField(null=True, blank=True)
     amount_in_fiat = models.FloatField(null=True, blank=True)
     amount_in_usdt_for_changer = models.FloatField(null=True, blank=True)
     date_used = models.DateTimeField(default=timezone.now)
@@ -164,6 +164,6 @@ class AnotherReq(models.Model):
     one_time_req = models.BooleanField(default=False, null=True, blank=True)
 
 class OperatorMode(models.Model):
-    invoices = models.ManyToManyField(Invoice, related_name="invoices", blank=True, null=True)
+    invoices = models.ManyToManyField(Invoice, related_name="mode_invoices", blank=True, null=True)
     active = models.BooleanField(default=True)
-    req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True)
+    req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True, related_name="mode_reqs")

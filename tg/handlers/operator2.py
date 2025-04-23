@@ -1,4 +1,4 @@
-from aiogram import  F, Router
+from aiogram import F, Router, Bot
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -157,7 +157,7 @@ class OperatorModeState(StatesGroup):
 
 
 # @router.message(OperatorModeState.in_mode)
-# async def in_mode(msg: Message, state: FSMContext):
+# async def in_mode(msg: Message, state: FSMContext, bot: Bot):
 #     data = await state.get_data()
 #     mode_id = data.get("mode_id")
 #     usage_id = data.get("usage_id")
@@ -176,5 +176,20 @@ class OperatorModeState(StatesGroup):
 #         await msg.answer("Вы вышли из режима", reply_markup=shop_operator_markup)
 #     else:
 #         if msg.photo or msg.document:
-#             ...
+#             builder = InlineKeyboardBuilder()
+#             short_name = req.name[:3].upper()
+#             last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
+#             new_invoice = await sync_to_async(Invoice.objects.create)(req=req)
+#             builder.add(InlineKeyboardButton(text=f"✅ {short_name} *{last_digits}",callback_data=f"in_mode_accept_{new_invoice.id}"))
+#             builder.add(InlineKeyboardButton(text=f"✍️ Др сумма",callback_data=f"accept_and_change_fiat_{last_usage.usage_inv.id}"))
+#             builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
+#             builder.adjust(1)
+#             if msg.photo:
+#                 file_id = msg.photo[-1].file_id
+#                 check_msg = await bot.send_photo(last_usage.usage_req.user.user_id, file_id,
+#                                                  reply_markup=builder.as_markup())
+#             else:
+#                 file_id = msg.document.file_id
+#                 check_msg = await bot.send_document(last_usage.usage_req.user.user_id, file_id,
+#                                                     reply_markup=builder.as_markup())
 
