@@ -131,6 +131,7 @@ async def add_new_req(call: CallbackQuery, state: FSMContext):
 async def awaiting_cart(msg: Message, state: FSMContext):
     try:
         cart = msg.text.strip()
+
         if len(cart) == 16:
             await state.update_data(cart=cart)
             await msg.answer("Укажите имя фамилию на латинице, указанное на карте: ")
@@ -150,7 +151,7 @@ async def awaiting_cart_name(msg: Message, state: FSMContext):
         country_id = data.get("country_id")
         country = await sync_to_async(Country.objects.get)(id=country_id)
         name = msg.text.upper()
-        new_req = await sync_to_async(Req.objects.create)(user=user, name=name, active=False, cart=cart[0], country=country)
+        new_req = await sync_to_async(Req.objects.create)(user=user, name=name, active=False, cart=cart, country=country)
         await msg.answer("🎊 Кошелек добавлен!")
         await state.clear()
     except Exception as e:

@@ -306,15 +306,14 @@ async def admin_show_shop_invoices(call: CallbackQuery):
                 req_usage = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
                 if req_usage:
                     req_usage = req_usage.first()
-                    if req_usage.photo:
-                        active_not = ''
-                        if invoice.accepted:
-                            active_not += "✅"
-                        elif req_usage.active:
-                            active_not += "♻️"
-                        else:
-                            active_not += "❌"
-                        builder.add(InlineKeyboardButton(
+                    active_not = ''
+                    if invoice.accepted:
+                        active_not += "✅"
+                    elif req_usage.active:
+                        active_not += "♻️"
+                    else:
+                        active_not += "❌"
+                    builder.add(InlineKeyboardButton(
                             text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
                             callback_data=f"admin_invoice_{invoice.id}"))
             builder.adjust(2)
@@ -352,7 +351,8 @@ async def admin_show_changer(call: CallbackQuery):
             short_name = req.name[:3].upper()
             last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
             builder.add(InlineKeyboardButton(text=f"{short_name}|{last_digits}", callback_data=f"admin_req_invoices_{req.id}"))
-    builder.add(InlineKeyboardButton(text="< Назад", callback_data="admin_all_changers"))
+    builder.adjust(2)
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="admin_all_changers"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 

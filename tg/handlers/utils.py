@@ -333,6 +333,7 @@ async def check_invoice(wid, invoice_id, bot):
                             pack.active = False
                             pack.save()
                             await bot.send_message(chat_id=pack.user.user_id, text=f"😔 Время просрочено, создайте заявку заново.")
+
                             break
                     await asyncio.sleep(60)
         except Exception as e:
