@@ -1,6 +1,7 @@
 import asyncio
 
 from aiogram import Bot, F, Router
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command, CommandObject, BaseFilter
 from asgiref.sync import sync_to_async
@@ -47,14 +48,14 @@ async def send_invoice_reminder(message: Message):
     await message.answer(msg, parse_mode="HTML")
 
 @router.message(Command("start"))
-async def start(msg: Message, command: CommandObject, bot: Bot):
+async def start(msg: Message, command: CommandObject, bot: Bot, state: FSMContext):
     user, created = await sync_to_async(TGUser.objects.get_or_create)(user_id=msg.from_user.id)
     user.first_name = msg.from_user.first_name
     user.last_name = msg.from_user.last_name
     user.username = msg.from_user.username
     user.save()
     args = command.args
-
+    await state.clear()
     if args:
         try:
             promo = await sync_to_async(Promo.objects.get)(code=args)
