@@ -61,7 +61,6 @@ class IsPhoto(BaseFilter):
                 #     return True
             else:
                 try:
-                    amount = int(msg.text[:-1])
                     return True
                 except Exception as e:
                     return False

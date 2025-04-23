@@ -327,13 +327,13 @@ async def check_invoice(wid, invoice_id, bot):
                                 balance_plus += invoice.amount_in_usdt_for_changer / 100 * prc
                             await bot.send_message(chat_id=pack.user.user_id, text=f"💸 Баланс пополнен на ${balance_plus}")
                             pack.active = False
+                            pack.finish = True
                             pack.save()
                             break
                         if invoice_data['status'] == 'expired':
                             pack.active = False
                             pack.save()
                             await bot.send_message(chat_id=pack.user.user_id, text=f"😔 Время просрочено, создайте заявку заново.")
-
                             break
                     await asyncio.sleep(60)
         except Exception as e:
@@ -396,7 +396,7 @@ async def transfer(satoshi, ltc_req, wid):
         "transfer-key": transfer_key,
         "destinations": [{"address": ltc_req,"amount": satoshi}],
         "fee": "normal",
-        "subtract-fee-from-amount": True
+        "subtract-fee-from-amount": False
     }
     pack = await sync_to_async(WithdrawalMode.objects.get)(id=wid)
     async with aiohttp.ClientSession() as session:
@@ -442,7 +442,7 @@ async def transfer_to_shop(satoshi, ltc_req, wid):
         "transfer-key": transfer_key,
         "destinations": [{"address": ltc_req, "amount": satoshi}],
         "fee": "normal",
-        "subtract-fee-from-amount": True
+        "subtract-fee-from-amount": False
     }
     pack = await sync_to_async(WithdrawalMode.objects.get)(id=wid)
     async with aiohttp.ClientSession() as session:
@@ -479,7 +479,7 @@ async def transfer_to_admin(satoshi, ltc_req, wid):
         "transfer-key": transfer_key,
         "destinations": [{"address": ltc_req, "amount": satoshi}],
         "fee": "normal",
-        "subtract-fee-from-amount": True
+        "subtract-fee-from-amount": False
     }
     pack = await sync_to_async(WithdrawalMode.objects.get)(id=wid)
     async with aiohttp.ClientSession() as session:
