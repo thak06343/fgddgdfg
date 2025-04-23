@@ -60,10 +60,7 @@ class IsPhoto(BaseFilter):
                 # if last_usage:
                 #     return True
             else:
-                try:
-                    return True
-                except Exception as e:
-                    return False
+                return False
         else:
             return False
 
