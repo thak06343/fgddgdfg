@@ -496,7 +496,9 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
         text = (f"KZT - {invoice.amount_in_kzt}T\n"
                 f"USDT - {invoice.amount_in_usdt_for_changer}\n"
                 f"USDT(SHOP) - {invoice.amount_in_usdt}\n"
-                f"operator - {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}\n")
+                f"operator - {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}\n"
+                f"cart - {invoice.req.cart} {invoice.req.name}\n"
+                f"shop - {invoice.shop.name}")
         try:
             check_msg = await bot.send_photo(chat_id=admin.user_id, photo=last_usage.photo if last_usage.photo else None,
                                              reply_markup=builder.as_markup(), caption=text)

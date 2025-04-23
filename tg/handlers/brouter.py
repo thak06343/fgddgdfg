@@ -55,10 +55,9 @@ class IsPhoto(BaseFilter):
                 chat, created = await sync_to_async(OperatorClientChat.objects.get_or_create)(chat_id=msg.chat.id)
                 chat.client = user
                 chat.save()
-                return  True
-                # last_usage = await sync_to_async(ReqUsage.objects.filter)(chat=chat) #, status="awaiting"
-                # if last_usage:
-                #     return True
+                last_usage = await sync_to_async(ReqUsage.objects.filter)(chat=chat, status="awaiting")
+                if last_usage:
+                    return True
             else:
                 return False
         else:

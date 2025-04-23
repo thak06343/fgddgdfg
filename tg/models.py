@@ -162,3 +162,8 @@ class AnotherReq(models.Model):
     amount_in_usdt = models.FloatField()
     invoices_for_zp_cart = models.ManyToManyField(Invoice)
     one_time_req = models.BooleanField(default=False, null=True, blank=True)
+
+class OperatorMode(models.Model):
+    invoices = models.ManyToManyField(Invoice, related_name="invoices", blank=True, null=True)
+    active = models.BooleanField(default=True)
+    req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True)

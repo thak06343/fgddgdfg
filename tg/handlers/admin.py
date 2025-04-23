@@ -651,12 +651,14 @@ async def admin_invoice(call: CallbackQuery):
 
     if invoice.status != "deleted" and not invoice.accepted:
         builder.row(InlineKeyboardButton(text="Удалить", callback_data=f"admin_del_invoice_{invoice.id}"))
-    elif invoice.status == "deleted":
+    if invoice.status == "deleted":
         text += "\n❌ Инвойс удален"
     req_usages = await sync_to_async(lambda: ReqUsage.objects.filter(usage_inv=invoice, photo__isnull=False))()
     for req_usage in req_usages:
         if req_usage.photo:
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
+    if invoice.accepted:
+        text += "\n\nИНВОЙС ПОДТВЕРЖДЕН!"
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text=f"✍️ Изменить сумму {invoice.req.country.country}", callback_data=f"admin_change_invoice_fiat_{invoice.id}"))
     builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="back_to_invoices"))

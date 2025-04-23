@@ -29,7 +29,7 @@ async def shop_operator_panel():
     shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
                                                 keyboard=[
                                                     [KeyboardButton(text="🔱 Инвойсы")],
-                                                    # [KeyboardButton(text="")]
+                                                    [KeyboardButton(text="🕹 Режим платежей")]
                                                 ])
     return shop_operator_bottoms
 

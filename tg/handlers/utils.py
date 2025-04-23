@@ -88,12 +88,12 @@ async def pay_checker(invoice, msg, bot, chat):
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
-            if secs >= 900 and not timeout:
+            if secs >= 1200 and not timeout:
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
                 timeout = True
                 await sync_to_async(new_req_usage.save)()
-
+                break
             if invoice.accepted:
                 await msg.answer("✅")
                 new_req_usage.status = "finish"
@@ -311,6 +311,7 @@ async def create_limit_invoice():
 async def check_invoice(wid, invoice_id, bot):
     pack = await sync_to_async(WithdrawalMode.objects.get)(id=wid)
     balance_plus = 0
+    part_paid = False
     while True:
         url = f"https://apirone.com/api/v2/invoices/{invoice_id}"
         try:
@@ -318,6 +319,13 @@ async def check_invoice(wid, invoice_id, bot):
                 async with session.get(url) as res:
                     if res.status == 200:
                         invoice_data = await res.json()
+                        for i in invoice_data['history']:
+                            if i['status'] == 'partpaid' and not part_paid:
+                                total_crypto = float(invoice_data['amount']) / 1_000_000
+                                paid_crypto = float(i['amount']) / 1_000_000
+                                left_crypto = total_crypto - paid_crypto
+                                await bot.send_message(chat_id=pack.user.user_id, text=f"Необходимо доплатить {left_crypto} LTC\n{invoice_data['address']}")
+                                part_paid = True
                         if invoice_data['status'] == 'completed' or invoice_data['status'] == 'overpaid':
                             invoices = pack.invoices.all()
                             for invoice in invoices:

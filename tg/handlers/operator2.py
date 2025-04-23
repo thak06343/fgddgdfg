@@ -1,14 +1,16 @@
 from aiogram import  F, Router
-from aiogram.types import Message, InlineKeyboardButton, CallbackQuery
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
 from django.utils import timezone
-from .utils import PAGE_SIZE
-from ..models import TGUser, Invoice, Req, ShopOperator, ReqUsage, Shop
+from .utils import PAGE_SIZE, find_req
+from ..kb import shop_operator_panel
+from ..models import TGUser, Invoice, Req, ShopOperator, ReqUsage, Shop, Course, OperatorMode
 from ..text import order_operator_text
 from datetime import  date
-
+from aiogram.fsm.context import FSMContext
 router = Router()
 
 class IsOperFilter(Filter):
@@ -123,3 +125,56 @@ async def shop_operator_invoice(call: CallbackQuery):
             await call.message.edit_text(text, reply_markup=builder.as_markup())
         except Exception as e:
             print(e)
+
+class OperatorModeState(StatesGroup):
+    awaiting_amount = State()
+    in_mode = State()
+
+# @router.message(F.text == "🕹 Режим платежей")
+# async def shop_operator_mode(msg: Message, state: FSMContext):
+#     usdt_amount = 200
+#     req = await find_req(usdt_amount)
+#     if not req:
+#         usdt_amount = 100
+#         req = await find_req(usdt_amount)
+#     if req:
+#         text = f"Реквизиты меняются каждые ${usdt_amount}!\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
+#         text2 = (f"{req.name}\n"
+#                  f"{req.flag} {req.cart}")
+#         await state.set_state(OperatorModeState.in_mode)
+#         shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
+#                                                     keyboard=[
+#                                                         [KeyboardButton(text="Выйти из режима")],
+#                                                     ])
+#         user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
+#         shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
+#         new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req)
+#         new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=req, status="in_operator_mode")
+#         await state.update_data(mode_id=new_operator_mode.id, usage_id=new_usage.id, shop_id=shop_operator.shop.id)
+#         await msg.answer(text, reply_markup=shop_operator_bottoms)
+#         await msg.answer(text2)
+
+
+
+# @router.message(OperatorModeState.in_mode)
+# async def in_mode(msg: Message, state: FSMContext):
+#     data = await state.get_data()
+#     mode_id = data.get("mode_id")
+#     usage_id = data.get("usage_id")
+#     shop_id = data.get("shop_id")
+#     shop = await sync_to_async(Shop.objects.get)(id=shop_id)
+#     operator_mode = await sync_to_async(OperatorMode.objects.get)(id=mode_id)
+#     usage = await sync_to_async(ReqUsage.objects.get)(id=usage_id)
+#     req = usage.req
+#     if msg.text == "Выйти из режима":
+#         await state.clear()
+#         shop_operator_markup = await shop_operator_panel()
+#         operator_mode.active = False
+#         operator_mode.save()
+#         usage.active = False
+#         usage.save()
+#         await msg.answer("Вы вышли из режима", reply_markup=shop_operator_markup)
+#     else:
+#         if msg.photo or msg.document:
+#             ...
+
