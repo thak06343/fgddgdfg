@@ -598,7 +598,7 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
                                            message_id=msg.message_id)
         except Exception as e:
             print(e)
-        invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
+        invoice = await sync_to_async(Invoice.objects.get)(id=int(invoice_id))
         invoice.amount_in_fiat = int(msg.text)
         invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
         invoice.amount_in_usdt_for_changer = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt

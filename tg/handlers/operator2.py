@@ -147,7 +147,7 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
                                                         [KeyboardButton(text="Выйти из режима")],
                                                     ])
         user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
-        shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
+        shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user, active=True)
         new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
         new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=req, status="in_operator_mode")
         await state.update_data(mode_id=new_operator_mode.id, usage_id=new_usage.id, shop_id=shop_operator.shop.id)
@@ -162,9 +162,9 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
     mode_id = data.get("mode_id")
     usage_id = data.get("usage_id")
     shop_id = data.get("shop_id")
-    shop = await sync_to_async(Shop.objects.get)(id=shop_id)
-    operator_mode = await sync_to_async(OperatorMode.objects.get)(id=mode_id)
-    usage = await sync_to_async(ReqUsage.objects.get)(id=usage_id)
+    shop = await sync_to_async(Shop.objects.get)(id=int(shop_id))
+    operator_mode = await sync_to_async(OperatorMode.objects.get)(id=int(mode_id))
+    usage = await sync_to_async(ReqUsage.objects.get)(id=int(usage_id))
     req = usage.req
     if msg.text == "Выйти из режима":
         await state.clear()
@@ -179,8 +179,8 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
             builder = InlineKeyboardBuilder()
             short_name = req.name[:3].upper()
             last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
-            new_invoice = await sync_to_async(Invoice.objects.create)(req=req)
-            check_msg = await msg.answer("♻️ На обработке")
+            new_invoice = await sync_to_async(Invoice.objects.create)(req=req, shop=shop)
+            check_msg = await msg.reply("♻️ На обработке")
             builder.add(InlineKeyboardButton(text=f"✅ {short_name} *{last_digits}",callback_data=f"in_mode_accept_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
             builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}"))
             builder.adjust(1)
