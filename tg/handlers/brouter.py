@@ -109,9 +109,12 @@ async def kzt_answer(msg: Message, bot: Bot):
 async def send_photo_to_op(msg: Message, bot: Bot):
     chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=msg.chat.id)
     last_usage = await sync_to_async(lambda: ReqUsage.objects.filter(chat=chat).order_by('-date_used').first())()
+    req = last_usage.usage_req
     if last_usage:
         builder = InlineKeyboardBuilder()
-        builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T)", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
+        short_name = req.name[:3].upper()
+        last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
+        builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T) {short_name} *{last_digits}", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
         builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{last_usage.usage_inv.id}"))
         builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
         builder.adjust(1)
