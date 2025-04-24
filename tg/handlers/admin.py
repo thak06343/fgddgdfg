@@ -309,7 +309,7 @@ async def admin_active_usages(call: CallbackQuery):
             if page_number < total_pages:
                 builder.row(
                     InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
-            builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admin_all_shops"))
+            builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"back_to_invoices"))
             await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
         await send_invoices_page(call, page_number, total_pages)
@@ -910,7 +910,7 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     await msg.answer("Владелец не найден")
                     await state.clear()
             except Exception as e:
-                print(e)
+                await msg.answer(e)
         else:
             await msg.answer("Ошибка, попробуйте заново")
             await state.clear()

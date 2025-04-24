@@ -140,7 +140,7 @@ async def changers_current_balance(user):
                                                                           req__user__ref_by=user, sent_ref=False).aggregate(
         total=Coalesce(Sum('amount_in_usdt_for_changer'), 0,
                        output_field=FloatField()))['total'])()
-    ref_balance = ref_val / 100 * 2
+    ref_balance = ref_val / 100 * 3
     return balance, ref_balance
 
 async def changer_balance_with_invoices(user):

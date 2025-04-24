@@ -151,12 +151,23 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
                                                         [KeyboardButton(text="Выйти из режима")],
                                                     ])
         user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
-        shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user, active=True)
-        new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
-        await state.update_data(mode_id=new_operator_mode.id, shop_id=shop_operator.shop.id, req_id=req.id)
-        await state.set_state(OperatorModeState.in_mode)
-        await msg.answer(text, reply_markup=shop_operator_bottoms)
-        await msg.answer(text2)
+        shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
+        if shop_operator:
+            shop_operator = shop_operator.first()
+            new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
+            await state.update_data(mode_id=new_operator_mode.id, shop_id=shop_operator.shop.id, req_id=req.id)
+            await state.set_state(OperatorModeState.in_mode)
+            await msg.answer(text, reply_markup=shop_operator_bottoms)
+            await msg.answer(text2)
+        else:
+            shop = await sync_to_async(Shop.objects.filter)(boss=user)
+            if shop:
+                shop = shop.first()
+                new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
+                await state.update_data(mode_id=new_operator_mode.id, shop_id=shop.id, req_id=req.id)
+                await state.set_state(OperatorModeState.in_mode)
+                await msg.answer(text, reply_markup=shop_operator_bottoms)
+                await msg.answer(text2)
 
 
 
