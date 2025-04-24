@@ -116,7 +116,7 @@ async def send_photo_to_op(msg: Message, bot: Bot):
         short_name = req.name[:3].upper()
         last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
         builder.add(InlineKeyboardButton(text=f"✅ ({last_usage.usage_inv.amount_in_kzt}T) {short_name} *{last_digits}", callback_data=f"accept_invoice_{last_usage.usage_inv.id}"))
-        builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{last_usage.usage_inv.id}"))
+        # builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{last_usage.usage_inv.id}"))
         builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{last_usage.usage_inv.id}"))
         builder.adjust(1)
         if msg.photo:
