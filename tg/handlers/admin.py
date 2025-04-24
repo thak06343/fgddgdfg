@@ -47,6 +47,7 @@ async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
         ltc_address = msg.text.strip()
         is_ltc_req = await IsLtcReq(ltc_address)
         if is_ltc_req:
+            await state.clear()
             balance, adm_invoices =  await admin_balance(user)
             try:
                 ltc_usdt_price = await get_ltc_usd_rate()
@@ -60,7 +61,6 @@ async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
             await sync_to_async(pack.invoices.add)(*adm_invoices)
             result = await transfer_to_admin(amount_in_satoshi, ltc_address, pack.id)
             await msg.answer(result)
-            await state.clear()
         else:
             await msg.answer("Неверный LTC адрес, попробуйте еще раз")
     except Exception as e:

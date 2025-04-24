@@ -107,7 +107,7 @@ async def pay_checker(invoice, msg, bot, chat):
                     val_in_usdt = total_amount_val + awaiting_usdt
                     ostatok = changer.limit - val_in_usdt
                     if ostatok <= 25:
-                        await req_inactive(changer)
+                        result = await req_inactive(changer)
                         await bot.send_message(chat_id=changer.user_id, text="Режим P2P отключен\n\n❗️ Для завершения круга перейдите в раздел P2P",
                                                    reply_markup=await changer_panel_bottom(changer))
 
@@ -166,7 +166,7 @@ async def req_inactive(user):
     reqs = await sync_to_async(Req.objects.filter)(active=True, user=user)
     for req in reqs:
         req.active = False
-        await sync_to_async(req.save)()
+        req.save()
     return True
 
 
@@ -418,12 +418,11 @@ async def transfer(satoshi, ltc_req, wid):
         async with session.post(url, json=payload, headers=headers) as response:
             if response.status == 200:
                 result = await response.json()
-                print(result)
+
                 invoices = pack.invoices.all()
-                print("INVOICES", invoices)
                 if invoices:
                     for i in invoices:
-                        print("in SENT CHANGER")
+
                         i.sent_changer = True
                         await sync_to_async(i.save)()
                 ref_invoices = pack.ref_invoices.all()
@@ -435,7 +434,6 @@ async def transfer(satoshi, ltc_req, wid):
                 pack.active = False
                 pack.save()
                 result = await format_transfer_result(result)
-                print("RESULT AFTER FORMAT", result)
                 return result
             else:
                 pack.active = False
@@ -519,6 +517,7 @@ async def transfer_to_admin(satoshi, ltc_req, wid):
                 print("Error message:", error_message)
                 return error_message
 
+
 async def format_transfer_result(data: dict) -> str:
     try:
         destinations = data.get('destinations', [])
@@ -526,9 +525,19 @@ async def format_transfer_result(data: dict) -> str:
             return "❌ Ошибка: нет данных о переводе."
 
         dest = destinations[0]
-        address = dest.get('address', 'Неизвестно')
-        amount_satoshi = dest.get('amount', 0)
-        amount_ltc = amount_satoshi / 100_000_000  # сатоши в LTC
+        address = dest.get('address') or "Неизвестно"
+        raw_amount = dest.get('amount', 0)
+
+        try:
+            amount = float(raw_amount)
+        except (ValueError, TypeError):
+            amount = 0.0
+
+
+        if amount > 10000:
+            amount_ltc = amount / 100_000_000
+        else:
+            amount_ltc = amount
 
         text = (
             f"✅ Переведено **{amount_ltc:.8f} LTC**\n"
@@ -537,7 +546,6 @@ async def format_transfer_result(data: dict) -> str:
         return text
     except Exception as e:
         return f"❌ Ошибка обработки данных перевода: {e}"
-
 async def operator_invoices(operator):
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=operator)
     usdt_balance, invoice_list = await sync_to_async(lambda: (

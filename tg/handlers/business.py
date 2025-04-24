@@ -59,6 +59,7 @@ async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
         ltc_address = msg.text.strip()
         is_ltc_req = await IsLtcReq(ltc_address)
         if is_ltc_req:
+            await state.clear()
             balance, invoices = await shop_balance(shop)
             current_prc = 100 - shop.prc
             balance = balance / 100 * current_prc
@@ -73,8 +74,7 @@ async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
                                                                       ltc_amount=ltc_amount)
             await sync_to_async(pack.invoices.add)(*invoices)
             result = await transfer_to_shop(amount_in_satoshi, ltc_address, pack.id)
-            await msg.answer(result)
-            await state.clear()
+            await msg.answer(result, parse_mode="Markdown")
         else:
             await msg.answer("Неверный LTC адрес, попробуйте еще раз")
     except Exception as e:
@@ -104,28 +104,12 @@ async def shop_statistics(msg: Message):
     shop = await sync_to_async(Shop.objects.get)(boss=user)
     today = date.today()
 
-    total_amount_usdt_today = await sync_to_async(lambda: Invoice.objects.filter(
-        accepted=True,
-        shop=shop,
-        date_used__date=today
-    ).aggregate(total=Coalesce(Sum('amount_in_usdt'), 0, output_field=FloatField()))['total'])()
-
-
-    invoices_count_today = await sync_to_async(lambda: Invoice.objects.filter(
-        accepted=True,
-        shop=shop,
-        date_used__date=today
-    ).count())()
-
-    total_amount_usdt_all = await sync_to_async(lambda: Invoice.objects.filter(
-        accepted=True,
-        shop=shop
-    ).aggregate(total=Coalesce(Sum('amount_in_usdt'), 0, output_field=FloatField()))['total'])()
-
-    invoices_count_all = await sync_to_async(lambda: Invoice.objects.filter(
-        accepted=True,
-        shop=shop
-    ).count())()
+    total_amount_usdt_today = await sync_to_async(lambda: Invoice.objects.filter(accepted=True,shop=shop,date_used__date=today).
+                                                  aggregate(total=Coalesce(Sum('amount_in_usdt'), 0, output_field=FloatField()))['total'])()
+    invoices_count_today = await sync_to_async(lambda: Invoice.objects.filter(accepted=True, shop=shop, date_used__date=today).count())()
+    total_amount_usdt_all = await sync_to_async(lambda: Invoice.objects.filter(accepted=True, shop=shop).aggregate
+                        (total=Coalesce(Sum('amount_in_usdt'), 0, output_field=FloatField()))['total'])()
+    invoices_count_all = await sync_to_async(lambda: Invoice.objects.filter(accepted=True,shop=shop).count())()
 
 
     stat_text = (
@@ -142,10 +126,7 @@ async def shop_statistics(msg: Message):
     builder.add(InlineKeyboardButton(text="💳 Платежи", callback_data="all_shop_invoices"))
     builder.add(InlineKeyboardButton(text=f"Операторы", callback_data="all_shop_operators"))
     builder.adjust(1)
-
     await msg.answer(stat_text, reply_markup=builder.as_markup(), parse_mode="HTML")
-
-
 
 
 @router.callback_query(F.data == "all_shop_invoices")

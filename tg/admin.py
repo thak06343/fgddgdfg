@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TGUser, Invoice, Req, ReqUsage, OperatorClientChat, Course, ShopOperator, Shop, Promo, Country, WithdrawalMode
+from .models import TGUser, Invoice, Req, ReqUsage, OperatorClientChat, Course, ShopOperator, Shop, Promo, Country, WithdrawalMode, ApiAccount
 
 
 @admin.register(TGUser)
@@ -11,6 +11,9 @@ class TGUserAdmin(admin.ModelAdmin):
 class CourseAdmin(admin.ModelAdmin):
     list_display = ['id']
 
+@admin.register(ApiAccount)
+class ApiAccountAdmin(admin.ModelAdmin):
+    list_display = ['id']
 
 @admin.register(Req)
 class ReqAdmin(admin.ModelAdmin):

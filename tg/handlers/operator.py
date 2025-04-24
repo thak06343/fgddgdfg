@@ -83,6 +83,7 @@ async def withdraw_to_changer(msg: Message, state: FSMContext):
     try:
         is_ltc_req = await IsLtcReq(msg.text)
         if is_ltc_req:
+            await state.clear()
             user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
             ltc_address = msg.text.strip()
             main_balance, main_invs, ref_balance, ref_invs = await changer_balance_with_invoices(user)
@@ -107,7 +108,6 @@ async def withdraw_to_changer(msg: Message, state: FSMContext):
             await sync_to_async(pack.ref_invoices.add)(*ref_invs)
             result = await transfer(amount_in_satoshi, ltc_address, pack.id)
             await msg.answer(result, parse_mode="Markdown")
-            await state.clear()
         else:
             await msg.answer("Неверный LTC адрес, попробуйте заново")
             await state.clear()
