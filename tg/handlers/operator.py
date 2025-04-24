@@ -600,6 +600,7 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
         operator_mode = await sync_to_async(OperatorMode.objects.get)(id=operator_mode_id)
         reaction = ReactionTypeEmoji(emoji="👍")
         invoice = await sync_to_async(Invoice.objects.get)(id=int(invoice_id))
+
         if not invoice.accepted:
             invoice.amount_in_fiat = int(msg.text)
             invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
@@ -610,12 +611,14 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
             invoice.save()
             all_current_invoices = operator_mode.invoices.all()
             balance = await operator_mode_invoice_balances(all_current_invoices)
-            await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${invoice.amount_in_usdt} (${int(balance)})")
+            await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${round(invoice.amount_in_usdt, 2)} (${int(balance)})")
             try:
                 await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
                                                message_id=msg.message_id)
             except Exception as e:
                 print(e)
+            if balance >= operator_mode.max_amount and not operator_mode.limited:
+                await bot.send_message(chat_id=check_chat_id, text="Вы достигли лимита, поменяйте реквизит!")
         await state.clear()
     except Exception as e:
         print(e)
