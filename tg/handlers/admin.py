@@ -204,7 +204,7 @@ async def admin_all_shops(call: CallbackQuery):
 
             builder = InlineKeyboardBuilder()
             for shop in inv_page:
-                builder.add(InlineKeyboardButton(text=f"{shop.name.upper()}", callback_data=f"admin_show_shop_{shop.id}"))
+                builder.add(InlineKeyboardButton(text=f"{shop.name.upper()}", callback_data=f"admin_promo_show_shop_{shop.id}"))
             builder.adjust(2)
             if page_number > 1:
                 builder.row(
@@ -218,10 +218,10 @@ async def admin_all_shops(call: CallbackQuery):
     else:
         await call.answer("Пусто!")
 
-@router.callback_query(F.data.startswith("admin_show_shop_"))
+@router.callback_query(F.data.startswith("admin_promo_show_shop_"))
 async def admin_show_shop(call: CallbackQuery):
     data = call.data.split("_")
-    shop = await sync_to_async(Shop.objects.get)(id=data[3])
+    shop = await sync_to_async(Shop.objects.get)(id=data[4])
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text=f"Создать оператора для {shop.name.upper()}", callback_data=f"admin_shop_operator_promo_{shop.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="admin_all_shops"))
@@ -440,7 +440,7 @@ async def back_to_invoices(call: CallbackQuery):
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data == "admin_all_photo_sent_invoices")
-async def admin_all_invoices(call: CallbackQuery):
+async def admin_all_photo_sent_invoices(call: CallbackQuery):
     invoices = await sync_to_async(lambda: Invoice.objects.filter(
         id__in=ReqUsage.objects.filter(photo__isnull=False).values_list('usage_inv_id', flat=True)
     ))()
@@ -502,7 +502,7 @@ async def admin_all_invoices(call: CallbackQuery):
         await call.message.answer("Нет инвойсов!")
 
 @router.callback_query(F.data == "admin_all_expired_invoices")
-async def admin_all_invoices(call: CallbackQuery):
+async def admin_all_expired_invoices(call: CallbackQuery):
     invoices = await sync_to_async(Invoice.objects.filter)(status="timeout")
     invoices = invoices.order_by('-date_used')
     if invoices:
@@ -558,7 +558,7 @@ async def admin_all_invoices(call: CallbackQuery):
 
 
 @router.callback_query(F.data == "admin_all_accepted_invoices")
-async def admin_all_invoices(call: CallbackQuery):
+async def admin_all_accepted_invoices(call: CallbackQuery):
     invoices = await sync_to_async(Invoice.objects.filter)(accepted=True)
     invoices = invoices.order_by('-date_used')
     if invoices:
