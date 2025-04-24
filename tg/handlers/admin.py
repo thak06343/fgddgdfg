@@ -806,7 +806,7 @@ async def admin_change_operator(call: CallbackQuery):
     changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
     builder = InlineKeyboardBuilder()
     for changer in changers:
-        builder.add(InlineKeyboardButton(text=f"{changer.username if changer.username else changer.first_name}", callback_data=f"adminsend_invoice_{data[2]}_{data[3]}"))
+        builder.add(InlineKeyboardButton(text=f"{changer.username if changer.username else changer.first_name}", callback_data=f"adminsend_invoice_{data[2]}_{data[3]}_{changer.user_id}"))
     builder.adjust(2)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admindecline_invoice_{data[2]}_{data[3]}"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
@@ -826,10 +826,10 @@ async def admin_send_invoice(call: CallbackQuery, bot: Bot):
     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
     builder.adjust(1)
     try:
-        await bot.send_photo(invoice.req.user.user_id, usage.photo,
+        await bot.send_photo(chat_id=data[4], photo=usage.photo,
                              reply_markup=builder.as_markup())
     except Exception as e:
-        await bot.send_document(invoice.req.user.user_id, usage.photo,
+        await bot.send_document(chat_id=data[4], document=usage.photo,
                                 reply_markup=builder.as_markup())
     await call.answer("Отправлено!", show_alert=True)
 
@@ -874,10 +874,10 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice_id}"))
                     builder.adjust(1)
                     try:
-                        await bot.send_photo(invoice.req.user.user_id, usage.photo,
+                        await bot.send_photo(chat_id=req.user.user_id, photo=usage.photo,
                                              reply_markup=builder.as_markup())
                     except Exception as e:
-                        await bot.send_document(invoice.req.user.user_id, usage.photo,
+                        await bot.send_document(chat_id=req.user.user_id, document=usage.photo,
                                              reply_markup=builder.as_markup())
                     await state.clear()
                 else:
