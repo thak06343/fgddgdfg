@@ -595,11 +595,11 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
             invoice.amount_in_fiat = amount
             country = invoice.req.country
             if country.country != "uzs":
-                fiat = amount / country.kzt_to_fiat
+                fiat = amount
                 usdt_for_changer = fiat / country.fiat_to_usdt
                 usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
             else:
-                fiat = amount * country.kzt_to_fiat
+                fiat = amount
                 usdt_for_changer = fiat / country.fiat_to_usdt
                 usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
             invoice.amount_in_usdt = usdt_for_shop
@@ -638,8 +638,8 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
         if not invoice.accepted:
             invoice.amount_in_fiat = int(msg.text)
             invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
-            invoice.amount_in_usdt_for_changer = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt
-            invoice.amount_in_usdt = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt_for_shop
+            invoice.amount_in_usdt_for_changer = int(msg.text) / invoice.req.country.fiat_to_usdt
+            invoice.amount_in_usdt = int(msg.text) / invoice.req.country.fiat_to_usdt_for_shop
             invoice.accepted = True
             invoice.save()
             operator_mode.invoices.add(invoice)
