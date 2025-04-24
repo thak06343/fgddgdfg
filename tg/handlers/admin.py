@@ -485,16 +485,17 @@ async def admin_req_invoices(call: CallbackQuery):
     else:
         await call.message.answer("Нет инвойсов!")
 
-
 @router.callback_query(F.data == "back_to_invoices")
 async def back_to_invoices(call: CallbackQuery):
     builder = InlineKeyboardBuilder()
+    builder.row(InlineKeyboardButton(text="Все", callback_data="admin_all_invoices"))
     builder.add(InlineKeyboardButton(text="Операторы", callback_data="admin_all_changers"))
-    builder.add(InlineKeyboardButton(text="Все", callback_data="admin_all_invoices"))
+    builder.add(InlineKeyboardButton(text="Магазины", callback_data="admin_all_shops_invoices"))
     builder.add(InlineKeyboardButton(text="Принятые", callback_data="admin_all_accepted_invoices"))
     builder.add(InlineKeyboardButton(text="Просроченные", callback_data="admin_all_expired_invoices"))
     builder.add(InlineKeyboardButton(text="Отправлена фото", callback_data="admin_all_photo_sent_invoices"))
-    builder.adjust(1)
+    builder.add(InlineKeyboardButton(text="Активные", callback_data="admin_active_usages"))
+    builder.adjust(2)
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data == "admin_all_photo_sent_invoices")
@@ -613,8 +614,6 @@ async def admin_all_expired_invoices(call: CallbackQuery):
     else:
         await call.message.answer("Нет инвойсов!")
 
-
-
 @router.callback_query(F.data == "admin_all_accepted_invoices")
 async def admin_all_accepted_invoices(call: CallbackQuery):
     invoices = await sync_to_async(Invoice.objects.filter)(accepted=True)
@@ -668,7 +667,6 @@ async def admin_all_accepted_invoices(call: CallbackQuery):
         await send_invoices_page(call, page_number, total_pages)
     else:
         await call.message.answer("Нет инвойсов!")
-
 
 @router.callback_query(F.data == "admin_all_invoices")
 async def admin_all_invoices(call: CallbackQuery):
