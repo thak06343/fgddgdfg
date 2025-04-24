@@ -605,8 +605,8 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
             invoice.amount_in_usdt_for_changer = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt
             invoice.amount_in_usdt = invoice.amount_in_fiat / invoice.req.country.fiat_to_usdt_for_shop
             invoice.accepted = True
-            operator_mode.invoices.add(invoice)
             invoice.save()
+            operator_mode.invoices.add(invoice)
             all_current_invoices = operator_mode.invoices.all()
             balance = await operator_mode_invoice_balances(all_current_invoices)
             await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${round(invoice.amount_in_usdt, 2)} (${int(balance)})")

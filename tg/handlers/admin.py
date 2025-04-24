@@ -651,15 +651,15 @@ async def admin_all_invoices(call: CallbackQuery):
         @router.callback_query(F.data.startswith("next_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
-            # if page_number > total_pages:
-            #     page_number = total_pages
+            if page_number > total_pages:
+                page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         @router.callback_query(F.data.startswith("prev_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
-            # if page_number < total_pages:
-            #     page_number = total_pages
+            if page_number <= total_pages:
+                page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         async def send_invoices_page(call, page_number, total_pages):
@@ -821,7 +821,7 @@ async def decline_invoice_admin(call: CallbackQuery):
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text=f"Удалить", callback_data=f"admindelete_invoice_{invoice.id}"))
     builder.add(InlineKeyboardButton(text=f"Ввести 4 цифры", callback_data=f"admintype_4digits_{invoice.id}_{data[3]}"))
-    builder.add(InlineKeyboardButton(text="Перевести", callback_data=f"adminchange_operator_{invoice.id}_{data[3]}"))
+    builder.add(InlineKeyboardButton(text="Перевести", callback_data=f"adminchange_operator_{invoice.id}_{data[3]}_{call.message.chat.id}_{call.message.message_id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admin_back_to_accept_{invoice.id}_{data[3]}"))
     builder.adjust(1, 2, 1)
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
@@ -832,7 +832,8 @@ async def admin_change_operator(call: CallbackQuery):
     changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
     builder = InlineKeyboardBuilder()
     for changer in changers:
-        builder.add(InlineKeyboardButton(text=f"{changer.username if changer.username else changer.first_name}", callback_data=f"adminsend_invoice_{data[2]}_{data[3]}_{changer.user_id}"))
+        builder.add(InlineKeyboardButton(text=f"{changer.username if changer.username else changer.first_name}",
+                                         callback_data=f"adminsend_invoice_{data[2]}_{data[3]}_{changer.user_id}_{data[4]}_{data[5]}"))
     builder.adjust(2)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admindecline_invoice_{data[2]}_{data[3]}"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
@@ -852,8 +853,7 @@ async def admin_send_invoice(call: CallbackQuery, bot: Bot):
     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
     builder.adjust(1)
     try:
-        await bot.send_photo(chat_id=str(data[4]), photo=usage.photo,
-                             reply_markup=builder.as_markup())
+        await bot.copy_message(chat_id=data[4], from_chat_id=data[5], message_id=int(data[6]), reply_markup=builder.as_markup())
     except Exception as e:
         await bot.send_document(chat_id=str(data[4]), document=usage.photo,
                                 reply_markup=builder.as_markup())
