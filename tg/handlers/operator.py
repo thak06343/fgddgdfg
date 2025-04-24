@@ -534,8 +534,8 @@ async def changer_back_to_accepts(call: CallbackQuery, state: FSMContext):
     invoice = await sync_to_async(Invoice.objects.get)(id=data[4])
     builder.add(InlineKeyboardButton(text=f"✅ ({invoice.amount_in_kzt}T)",
                                      callback_data=f"accept_invoice_{invoice.id}"))
-    builder.add(
-        InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice.id}"))
+    # builder.add(
+    #     InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice.id}"))
     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
     builder.adjust(1)
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())

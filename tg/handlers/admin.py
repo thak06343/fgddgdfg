@@ -651,15 +651,15 @@ async def admin_all_invoices(call: CallbackQuery):
         @router.callback_query(F.data.startswith("next_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
-            if page_number > total_pages:
-                page_number = total_pages
+            # if page_number > total_pages:
+            #     page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         @router.callback_query(F.data.startswith("prev_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
-            if page_number < total_pages:
-                page_number = total_pages
+            # if page_number < total_pages:
+            #     page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         async def send_invoices_page(call, page_number, total_pages):
