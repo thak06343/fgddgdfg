@@ -25,8 +25,8 @@ async def find_req(amount_usd):
     today = date.today()
     week_ago = today - timedelta(days=7)
     valid_reqs = await sync_to_async(lambda: Req.objects.filter(active=True, user__limit__gte=amount_usd, archived=False).annotate(
-        usage_count=Count('requsage',filter=Q(requsage__date_used__date__range=(week_ago, today)))).order_by('usage_count'))()
-
+        usage_count=Count('requsage',filter=Q(requsage__date_used__date__range=(week_ago, today),
+                                              requsage__usage_inv__accepted=True))).order_by('usage_count'))()
     for req in valid_reqs:
         total_amount_val, awaiting_usdt = await balance_val(req.user)
         limit = req.user.limit - awaiting_usdt

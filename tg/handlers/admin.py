@@ -746,8 +746,8 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
             invoice.accepted = True
             invoice.amount_in_fiat = amount
             country = invoice.req.country
-            if country.country != "uzs":
-                fiat = amount / country.kzt_to_fiat
+            if country.country.lower() == "kgs".lower():
+                fiat = amount
                 usdt_for_changer = fiat / country.fiat_to_usdt
                 usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
             else:
