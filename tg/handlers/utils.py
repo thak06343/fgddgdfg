@@ -249,13 +249,14 @@ async def get_ltc_usd_rate():
 
 async def create_ltc_invoice(amount_usd):
     account = os.getenv("APIRONE_ACC")
-    try:
-        account2 = await sync_to_async(ApiAccount.objects.all)()
-        if account2:
-            account2 = account2.first()
-            account = choose_ltc_account(account, account2.account)
-    except Exception as e:
-        print(e)
+    # try:
+    #     account2 = await sync_to_async(ApiAccount.objects.all)()
+    #     if account2:
+    #         account2 = account2.first()
+    #         account = choose_ltc_account(account, account2.account)
+    # except Exception as e:
+    #     print(e)
+    print("ACCOUNT", account)
     create_invoice_url = f'https://apirone.com/api/v2/accounts/{account}/invoices'
 
     course = await get_ltc_usd_rate()

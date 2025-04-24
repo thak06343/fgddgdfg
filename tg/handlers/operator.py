@@ -247,7 +247,6 @@ async def close_all_reqs(call: CallbackQuery, bot: Bot):
         ltc_amount_rounded = round(ltc_amount, 6)
         ltc_amount_safe = ltc_amount_rounded + 0.000001  # защита от partpaid
 
-
         invoice_id = invoice_info['invoice']
         ltc_address = invoice_info['address']
         expire = invoice_info['expire']
