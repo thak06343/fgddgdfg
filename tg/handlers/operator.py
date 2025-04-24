@@ -72,6 +72,7 @@ class WithdrawToChangerState(StatesGroup):
 async def take_zp_ltc(call: CallbackQuery, state: FSMContext):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     balance, ref_balance = await changers_current_balance(user)
+    balance += ref_balance
     if balance <= 9:
         await call.answer("Недостаточный баланс! Вывод от 10$", show_alert=True)
     else:
@@ -102,9 +103,7 @@ async def withdraw_to_changer(msg: Message, state: FSMContext):
             amount_in_satoshi = int(ltc_amount * 100_000_000)
             pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount)
             for main_inv in main_invs:
-                print(main_inv.id)
                 pack.invoices.add(main_inv)
-
             await sync_to_async(pack.ref_invoices.add)(*ref_invs)
             result = await transfer(amount_in_satoshi, ltc_address, pack.id)
             await msg.answer(result, parse_mode="Markdown")
