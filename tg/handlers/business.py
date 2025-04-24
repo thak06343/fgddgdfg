@@ -140,25 +140,21 @@ async def all_shop_invoices(call: CallbackQuery):
 
         @router.callback_query(F.data.startswith("next_page_"))
         async def handle_next_page(call: CallbackQuery):
-            current_page = int(call.data.split("_")[2])
-            page_number = min(current_page + 1, total_pages)
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         @router.callback_query(F.data.startswith("prev_page_"))
-        async def handle_prev_page(call: CallbackQuery):
-            current_page = int(call.data.split("_")[2])
-            page_number = max(current_page - 1, 1)
+        async def handle_next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number < total_pages:
+                page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         async def send_invoices_page(call, page_number, total_pages):
-            page_number = max(1, page_number)
             start_index = (page_number - 1) * PAGE_SIZE
             end_index = min(start_index + PAGE_SIZE, len(invoices))
-
-            if start_index >= len(invoices):
-                await call.answer("Страница не найдена.")
-                return
-
             inv_page = invoices[start_index:end_index]
             builder = InlineKeyboardBuilder()
             for invoice in inv_page:
@@ -287,25 +283,21 @@ async def business_op_invoices(call: CallbackQuery):
 
         @router.callback_query(F.data.startswith("next_page_"))
         async def handle_next_page(call: CallbackQuery):
-            current_page = int(call.data.split("_")[2])
-            page_number = min(current_page + 1, total_pages)
+            page_number = int(call.data.split("_")[2]) + 1
+            if page_number > total_pages:
+                page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         @router.callback_query(F.data.startswith("prev_page_"))
-        async def handle_prev_page(call: CallbackQuery):
-            current_page = int(call.data.split("_")[2])
-            page_number = max(current_page - 1, 1)
+        async def handle_next_page(call: CallbackQuery):
+            page_number = int(call.data.split("_")[2]) - 1
+            if page_number < total_pages:
+                page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
         async def send_invoices_page(call, page_number, total_pages):
-            page_number = max(1, page_number)
             start_index = (page_number - 1) * PAGE_SIZE
             end_index = min(start_index + PAGE_SIZE, len(invoices))
-
-            if start_index >= len(invoices):
-                await call.answer("Страница не найдена.")
-                return
-
             inv_page = invoices[start_index:end_index]
 
             builder = InlineKeyboardBuilder()
@@ -313,8 +305,6 @@ async def business_op_invoices(call: CallbackQuery):
                 active_not = ''
                 if invoice.accepted:
                     active_not += "✅"
-                elif invoice.active:
-                    active_not += "♻️"
                 else:
                     active_not += "❌"
                 builder.add(InlineKeyboardButton(

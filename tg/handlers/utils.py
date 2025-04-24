@@ -82,7 +82,7 @@ async def pay_checker(invoice, msg, bot, chat):
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
             req_usage = await sync_to_async(ReqUsage.objects.get)(id=new_req_usage.id)
             if invoice.status == "deleted":
-                new_req_usage.status = "timeout"
+                new_req_usage.status = "deleted"
                 new_req_usage.active = False
                 await sync_to_async(new_req_usage.save)()
                 break
