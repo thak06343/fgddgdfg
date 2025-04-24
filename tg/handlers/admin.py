@@ -820,7 +820,7 @@ async def decline_invoice_admin(call: CallbackQuery):
     invoice.save()
     builder = InlineKeyboardBuilder()
     builder.row(InlineKeyboardButton(text=f"Удалить", callback_data=f"admindelete_invoice_{invoice.id}"))
-    builder.add(InlineKeyboardButton(text=f"Ввести 4 цифры", callback_data=f"admintype_4digits_{invoice.id}_{data[3]}"))
+    builder.add(InlineKeyboardButton(text=f"Ввести 4 цифры", callback_data=f"admintype_4digits_{invoice.id}_{data[3]}_{call.message.chat.id}_{call.message.message_id}"))
     builder.add(InlineKeyboardButton(text="Перевести", callback_data=f"adminchange_operator_{invoice.id}_{data[3]}_{call.message.chat.id}_{call.message.message_id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admin_back_to_accept_{invoice.id}_{data[3]}"))
     builder.adjust(1, 2, 1)
@@ -849,7 +849,7 @@ async def admin_send_invoice(call: CallbackQuery, bot: Bot):
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text=f"✅ ({invoice.amount_in_kzt}T) {short_name} *{last_digits}",
                                      callback_data=f"accept_invoice_{invoice.id}"))
-    builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice.id}"))
+    # builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice.id}"))
     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
     builder.adjust(1)
     try:
@@ -874,7 +874,7 @@ class Admin4Digits(StatesGroup):
 async def admin_type_4digits(call: CallbackQuery, state: FSMContext):
     data = call.data.split("_")
     await state.set_state(Admin4Digits.awaiting_digits)
-    await state.update_data(invoice_id=data[2], usage_id=data[3])
+    await state.update_data(invoice_id=data[2], usage_id=data[3], from_chat_id=data[4], message_id=data[5])
     await call.answer("Введите 4 последние цифры на карте")
 
 @router.message(Admin4Digits.awaiting_digits)
@@ -889,6 +889,8 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     data = await state.get_data()
                     invoice_id = int(data.get("invoice_id"))
                     usage_id = int(data.get("usage_id"))
+                    from_chat_id = data.get("from_chat_id")
+                    message_id = int(data.get("message_id"))
 
                     usage = await sync_to_async(ReqUsage.objects.get)(id=usage_id)
                     invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
@@ -900,8 +902,10 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice_id}"))
                     builder.adjust(1)
                     try:
-                        await bot.send_photo(chat_id=req.user.user_id, photo=usage.photo,
-                                             reply_markup=builder.as_markup())
+
+                        await bot.copy_message(chat_id=req.user.user_id, from_chat_id=from_chat_id, message_id=message_id,
+                                               reply_markup=builder.as_markup())
+
                     except Exception as e:
                         await bot.send_document(chat_id=req.user.user_id, document=usage.photo,
                                              reply_markup=builder.as_markup())

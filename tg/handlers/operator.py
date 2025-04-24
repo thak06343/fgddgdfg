@@ -38,6 +38,43 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot):
     # course = await sync_to_async(Course.objects.first)()
     invoice_id = data[2]
     invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    if invoice.req.user == user:
+        invoice.accepted = True
+        invoice.save()
+        builder = InlineKeyboardBuilder()
+        country = await sync_to_async(Country.objects.get)(id=invoice.req.country.id)
+        if country:
+            amount_in_fiat = invoice.amount_in_fiat
+            amount_in_usdt = invoice.amount_in_usdt_for_changer
+            builder.add(InlineKeyboardButton(text=f"✅ +{int(amount_in_fiat)} (${round(amount_in_usdt, 2)})"
+                                                  f" *{invoice.req.cart[-4:]}", callback_data="none"))
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+            try:
+                await bot.unpin_chat_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+            except Exception as e:
+                print(e)
+    else:
+        reqs = await sync_to_async(Req.objects.filter)(archived=False)
+        builder = InlineKeyboardBuilder()
+        for req in reqs:
+            short_name = req.name[:3].upper()
+            last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
+            builder.add(
+                InlineKeyboardButton(text=f"✅ ({invoice.amount_in_kzt}T) {short_name} *{last_digits}",
+                                     callback_data=f"sended_invoice_{invoice.id}_{req.id}"))
+        builder.adjust(2)
+        builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{invoice.id}"))
+
+
+@router.callback_query(F.data.startswith("sended_invoice_"))
+async def sended_invoice(call: CallbackQuery, bot: Bot):
+    data = call.data.split("_")
+    invoice_id = data[2]
+    req_id = data[3]
+    invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
+    req = await sync_to_async(Req.objects.get)(id=req_id)
+    invoice.req = req
     invoice.accepted = True
     invoice.save()
     builder = InlineKeyboardBuilder()
@@ -52,7 +89,6 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot):
             await bot.unpin_chat_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         except Exception as e:
             print(e)
-
 
 @router.message(F.text == "📍 Главное")
 async def main_page(msg: Message):
