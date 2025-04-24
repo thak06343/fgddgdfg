@@ -15,17 +15,17 @@ from ..models import Req, Invoice, Course, ReqUsage, TGUser, Country, Withdrawal
 from asgiref.sync import sync_to_async
 from django.db.models.functions import Coalesce
 from django.db.models import Sum, Count, F, Q, FloatField
-from datetime import date
+from datetime import date, timedelta
 import asyncio
 from django.utils import timezone
-from datetime import timedelta, datetime
 from ..text import main_page_text, add_new_req_text, order_operator_text
 
 PAGE_SIZE = 30
 async def find_req(amount_usd):
     today = date.today()
+    week_ago = today - timedelta(days=7)
     valid_reqs = await sync_to_async(lambda: Req.objects.filter(active=True, user__limit__gte=amount_usd, archived=False).annotate(
-        usage_count=Count('requsage',filter=Q(requsage__date_used__date=today))).order_by('usage_count'))()
+        usage_count=Count('requsage',filter=Q(requsage__date_used__date__range=(week_ago, today)))).order_by('usage_count'))()
 
     for req in valid_reqs:
         total_amount_val, awaiting_usdt = await balance_val(req.user)
