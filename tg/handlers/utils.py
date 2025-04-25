@@ -149,7 +149,7 @@ async def changers_current_balance(user):
                                                                           req__user__ref_by=user, sent_ref=False).aggregate(
         total=Coalesce(Sum('amount_in_usdt_for_changer'), 0,
                        output_field=FloatField()))['total'])()
-    ref_balance = ref_val / 100 * 3
+    ref_balance = ref_val / 100 * 2
     return balance, ref_balance
 
 async def changer_balance_with_invoices(user):
@@ -535,27 +535,28 @@ async def format_transfer_result(data: dict) -> str:
             return "❌ Ошибка: нет данных о переводе."
 
         dest = destinations[0]
-        address = dest.get('address') or "Неизвестно"
+        address = dest.get('address') or "-"
         raw_amount = dest.get('amount', 0)
 
-        try:
-            amount = float(raw_amount)
-        except (ValueError, TypeError):
-            amount = 0.0
+        # try:
+        #     amount = float(raw_amount)
+        # except (ValueError, TypeError):
+        #     amount = 0.0
 
 
-        if amount > 10000:
-            amount_ltc = amount / 100_000_000
-        else:
-            amount_ltc = amount
+        # if amount > 10000:
+        #     amount_ltc = amount / 100_000_000
+        # else:
+        #     amount_ltc = amount
 
         text = (
-            f"✅ Переведено **{amount_ltc:.8f} LTC**\n"
+            f"✅ Переведено **{raw_amount:.8f} LTC**\n"
             f"📍 На адрес: `{address}`"
         )
         return text
     except Exception as e:
         return f"❌ Ошибка обработки данных перевода: {e}"
+
 async def operator_invoices(operator):
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=operator)
     usdt_balance, invoice_list = await sync_to_async(lambda: (
