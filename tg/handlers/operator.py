@@ -65,7 +65,7 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot):
                                      callback_data=f"sended_invoice_{invoice.id}_{req.id}"))
         builder.adjust(2)
         builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{invoice.id}"))
-
+        await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("sended_invoice_"))
 async def sended_invoice(call: CallbackQuery, bot: Bot):

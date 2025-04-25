@@ -907,7 +907,7 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
                     builder = InlineKeyboardBuilder()
                     builder.add(InlineKeyboardButton(text=f"✅ ({invoice.amount_in_kzt}T) {short_name} *{last_digits}", callback_data=f"accept_invoice_{invoice_id}"))
-                    builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice_id}"))
+                    # builder.add(InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice_id}"))
                     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice_id}"))
                     builder.adjust(1)
                     try:

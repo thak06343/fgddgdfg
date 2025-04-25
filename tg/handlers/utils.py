@@ -94,7 +94,7 @@ async def pay_checker(invoice, msg, bot, chat):
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
                 timeout = True
-                await sync_to_async(new_req_usage.save)()
+                new_req_usage.save()
             if secs >= 1200 and not timeout and req_usage.status == "photo_sent" and not napomnil:
                 try:
                     await bot.send_message(chat_id=req_usage.usage_req.user.user_id, text="Просроченный инвойс",
