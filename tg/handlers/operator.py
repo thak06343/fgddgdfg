@@ -415,6 +415,7 @@ async def manage_reqs(call: CallbackQuery):
         last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
         builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits} "
                                               f"{'🔒' if req.archived else ' '}", callback_data=f"manage_req_{req.id}"))
+    builder.adjust(2)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_settings"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
