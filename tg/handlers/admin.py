@@ -912,8 +912,12 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     builder.adjust(1)
                     try:
 
-                        await bot.copy_message(chat_id=req.user.user_id, from_chat_id=from_chat_id, message_id=message_id,
+                        check_msd = await bot.copy_message(chat_id=req.user.user_id, from_chat_id=from_chat_id, message_id=message_id,
                                                reply_markup=builder.as_markup())
+                        try:
+                            await bot.pin_chat_message(chat_id=check_msd.chat.id, message_id=check_msd.message_id)
+                        except Exception as e:
+                            print(e)
 
                     except Exception as e:
                         await bot.send_document(chat_id=req.user.user_id, document=usage.photo,
