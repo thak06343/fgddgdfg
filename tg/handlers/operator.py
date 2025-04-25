@@ -55,7 +55,7 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot):
             except Exception as e:
                 print(e)
     else:
-        reqs = await sync_to_async(Req.objects.filter)(archived=False)
+        reqs = await sync_to_async(Req.objects.filter)(user=user, archived=False)
         builder = InlineKeyboardBuilder()
         for req in reqs:
             short_name = req.name[:3].upper()
