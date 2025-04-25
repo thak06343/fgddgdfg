@@ -58,6 +58,7 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot):
         reqs = await sync_to_async(Req.objects.filter)(user=user, archived=False)
         builder = InlineKeyboardBuilder()
         for req in reqs:
+
             short_name = req.name[:3].upper()
             last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
             builder.add(
@@ -516,8 +517,18 @@ async def activate_req_edit(call: CallbackQuery):
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("decline_invoice_"))
+async def decline_invoice(call: CallbackQuery):
+    data = call.data.split("_")
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Не пришло", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
+    builder.add(InlineKeyboardButton(text="Проблема с чеком", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
+    builder.add(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{data[2]}"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("declineinvoice_"))
 async def decline_invoice(call: CallbackQuery, bot: Bot):
     data = call.data.split("_")
+    status = data[1]
     invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
     last_usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
@@ -529,12 +540,13 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     else:
         admin = await sync_to_async(TGUser.objects.filter)(is_admin=True)
         admin = admin.first()
-        text = (f"KZT - {invoice.amount_in_kzt}T\n"
-                f"USDT - {invoice.amount_in_usdt_for_changer}\n"
+        text = (f"({invoice.id})KZT - {invoice.amount_in_kzt}T\n"
+                f"USDT  - {invoice.amount_in_usdt_for_changer}\n"
                 f"USDT(SHOP) - {invoice.amount_in_usdt}\n"
                 f"operator - {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}\n"
                 f"cart - {invoice.req.cart} {invoice.req.name}\n"
-                f"shop - {invoice.shop.name}")
+                f"shop - {invoice.shop.name}\n\n"
+                f"❗️{status}")
         try:
             check_msg = await bot.send_photo(chat_id=admin.user_id, photo=last_usage.photo if last_usage.photo else None,
                                              reply_markup=builder.as_markup(), caption=text)
