@@ -226,7 +226,7 @@ async def inactivity_checker(bot):
                             user.save()
             except Exception as e:
                 print(f"Ошибка при обработке пользователя {user.user_id}: {e}")
-        await asyncio.sleep(60)
+        await asyncio.sleep(1800)
 
 
 async def req_adder(msg):
