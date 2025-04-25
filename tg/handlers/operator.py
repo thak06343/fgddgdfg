@@ -170,6 +170,11 @@ async def awaiting_cart(msg: Message, state: FSMContext):
         cart = msg.text.strip()
 
         if len(cart) == 16:
+            req = await sync_to_async(Req.objects.filter)(cart=cart)
+            if req:
+                await msg.answer("Карта уже добавлена, попробуйте заново")
+                await state.clear()
+                return
             await state.update_data(cart=cart)
             await msg.answer("Укажите имя фамилию на латинице, указанное на карте: ")
             await state.set_state(AddReqState.awaiting_name)
