@@ -420,14 +420,14 @@ async def admin_req_invoices(call: CallbackQuery):
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
         page_number = 1
 
-        @router.callback_query(F.data.startswith("next_page_"))
+        @router.callback_query(F.data.startswith("nnext_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
             if page_number > total_pages:
                 page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
-        @router.callback_query(F.data.startswith("prev_page_"))
+        @router.callback_query(F.data.startswith("pprev_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
             if page_number < total_pages:
@@ -458,10 +458,10 @@ async def admin_req_invoices(call: CallbackQuery):
             builder.adjust(2)
             if page_number > 1:
                 builder.row(
-                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+                    InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"pprev_page_{page_number - 1}"))
             if page_number < total_pages:
                 builder.row(
-                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+                    InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"nnext_page_{page_number + 1}"))
             builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admin_show_changer_{req.user.id}"))
             await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
@@ -764,6 +764,7 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
 @router.message(Command("bc"))
 async def admin_show_balance(msg: Message):
     changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
+    obwiy = 0
     text = " "
     for changer in changers:
         balance, ref_balance = await changers_current_balance(changer)
@@ -771,17 +772,25 @@ async def admin_show_balance(msg: Message):
         text += (f"{changer.username if changer.username else changer.first_name}\n"
                  f"${round(total_amount_val, 2)} на карте\n"
                  f"{round(awaiting_usdt, 2)} ожидающие платежи\n"
-                 f"${round(balance, 2)}Не выведенный баланс\n\n")
+                 f"${round(balance, 2)}Не выведенный баланс\n"
+                 f"${round(ref_balance, 2)} Реф баланс\n\n")
+        obwiy += balance
+        obwiy += ref_balance
+    text += f"\n{obwiy} Общий"
+
     await msg.answer(text)
 
 @router.message(Command("balance"))
 async def balance(msg: Message):
     shops = await sync_to_async(Shop.objects.all)()
     text = " "
+    total = 0
     for shop in shops:
         balance, invs = await shop_balance(shop)
         text += (f"{shop.name}\n"
                  f"${round(balance, 2)} {len(invs)}шт\n\n")
+        total += balance
+    text += f"\nTOTAL {total}"
     await msg.answer(text)
 
 @router.callback_query(F.data.startswith("admin_accept_invoice_"))

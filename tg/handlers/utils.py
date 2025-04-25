@@ -207,10 +207,10 @@ async def inactivity_checker(bot):
                         await sync_to_async(user.save)()
                     else:
                         if user.inactive_notified_at and (now - user.inactive_notified_at) > timedelta(hours=1):
-                            result = req_inactive(user)
+                            result = await req_inactive(user)
                             user.inactive_notified = False
                             user.inactive_notified_at = None
-                            await sync_to_async(user.save)()
+                            user.save()
             except Exception as e:
                 print(f"Ошибка при обработке пользователя {user.user_id}: {e}")
         await asyncio.sleep(60)
