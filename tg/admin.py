@@ -25,7 +25,7 @@ class ReqAdmin(admin.ModelAdmin):
 
 @admin.register(ReqUsage)
 class ReqUsageAdmin(admin.ModelAdmin):
-    list_display = ['id', 'active', 'status']
+    list_display = ['id', 'active', 'status', 'photo', 'usage_inv', 'usage_req']
 
 @admin.register(OperatorClientChat)
 class OperatorClientChatAdmin(admin.ModelAdmin):
@@ -33,8 +33,7 @@ class OperatorClientChatAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ['id', 'shop']
-
+    list_display = ['id', 'accepted', 'shop', 'amount_in_kzt', 'amount_in_fiat', 'amount_in_usdt_for_changer', 'status']
 
 @admin.register(ShopOperator)
 class ShopOperatorAdmin(admin.ModelAdmin):

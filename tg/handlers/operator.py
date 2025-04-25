@@ -654,5 +654,6 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
             if balance >= operator_mode.max_amount:
                 await bot.send_message(chat_id=check_chat_id, text="Вы достигли лимита, поменяйте реквизит!")
         await state.clear()
+
     except Exception as e:
         print(e)

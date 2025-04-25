@@ -71,12 +71,14 @@ async def promo_coder(promo, user, msg, bot):
         new_operator, created = await sync_to_async(ShopOperator.objects.get_or_create)(shop=promo.shop, operator=user)
         await msg.answer(f"Вы успешно добавлены!")
 
+
 async def pay_checker(invoice, msg, bot, chat):
     new_req_usage = await sync_to_async(ReqUsage.objects.create)(usage_req=invoice.req, usage_inv=invoice,
                                                                  status="awaiting", chat=chat)
     secs = 0
     photo_sent = False
     timeout = False
+    napomnil = False
     while True:
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
@@ -88,11 +90,18 @@ async def pay_checker(invoice, msg, bot, chat):
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
-            if secs >= 1200 and not timeout:
+            if secs >= 1200 and not timeout and req_usage.status != "photo_sent":
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
                 timeout = True
                 await sync_to_async(new_req_usage.save)()
+            if secs >= 1200 and not timeout and req_usage.status == "photo_sent" and not napomnil:
+                try:
+                    await bot.send_message(chat_id=req_usage.usage_req.user.user_id, text="Просроченный инвойс",
+                                           reply_to_message_id=msg.message_id)
+                    napomnil = True
+                except Exception as e:
+                    print(e)
             if secs >= 5000:
                 break
             if invoice.accepted:
