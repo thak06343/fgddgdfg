@@ -526,7 +526,7 @@ async def activate_req_edit(call: CallbackQuery):
 async def decline_invoice(call: CallbackQuery):
     data = call.data.split("_")
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="Не пришло", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
+    builder.add(InlineKeyboardButton(text="Не пришло", callback_data=f"declineinvoice_notreceived _{data[2]}"))
     builder.add(InlineKeyboardButton(text="Проблема с чеком", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
     builder.add(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{data[2]}"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
@@ -553,6 +553,8 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
                 f"cart - {invoice.req.cart} {invoice.req.name}\n"
                 f"shop - {invoice.shop.name}\n\n"
                 f"❗️{status}")
+        invoice.status = status
+        invoice.save()
         try:
             check_msg = await bot.send_photo(chat_id=admin.user_id, photo=last_usage.photo if last_usage.photo else None,
                                              reply_markup=builder.as_markup(), caption=text)
