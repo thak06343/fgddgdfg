@@ -93,7 +93,7 @@ async def pay_checker(invoice, msg, bot, chat):
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
-            if secs >= 1200 and not timeout and req_usage.status != "photo_sent":
+            if secs >= 1800 and not timeout and req_usage.status != "photo_sent":
                 new_req_usage.status = "timeout"
                 new_req_usage.active = False
                 timeout = True
