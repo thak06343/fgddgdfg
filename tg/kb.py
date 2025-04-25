@@ -20,7 +20,7 @@ async def changer_panel_bottom(user):
 
 async def shop_panel():
     changer_panel = ReplyKeyboardMarkup(resize_keyboard=True,
-                                        keyboard=[[KeyboardButton(text="💎 Главное")], [KeyboardButton(text="🕹 Режим платежей")],
+                                        keyboard=[[KeyboardButton(text="💎 Главное"), KeyboardButton(text="🕹 Режим платежей")],
                                                   [KeyboardButton(text="🔗 Статистика")],
                                                   [KeyboardButton(text="⚙️ Настройки")]])
     return changer_panel

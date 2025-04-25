@@ -44,19 +44,19 @@ async def shop_operator_invoices(msg: Message):
 async def shop_operator_all_invoices(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
-    invoices = await sync_to_async(lambda: Invoice.objects.filter(shop=shop_operator.shop, shop_operator=shop_operator).distinct().order_by('-date_used'))()
+    invoices = await sync_to_async(lambda: Invoice.objects.filter(shop_operator=shop_operator).order_by('-date_used'))()
     if invoices:
         total_pages = (len(invoices) + PAGE_SIZE - 1) // PAGE_SIZE
         page_number = 1
 
-        @router.callback_query(F.data.startswith("next_page_"))
+        @router.callback_query(F.data.startswith("shopoperatornext_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
             if page_number > total_pages:
                 page_number = total_pages
             await send_invoices_page(call, page_number, total_pages)
 
-        @router.callback_query(F.data.startswith("prev_page_"))
+        @router.callback_query(F.data.startswith("shopoperatorprev_page_"))
         async def handle_next_page(call: CallbackQuery):
             page_number = int(call.data.split("_")[2])
             if page_number < total_pages:
@@ -78,9 +78,9 @@ async def shop_operator_all_invoices(call: CallbackQuery):
                 builder.add(InlineKeyboardButton(text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT", callback_data=f"shop_operator_invoice_{invoice.id}"))
             builder.adjust(2)
             if page_number > 1:
-                builder.row(InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"prev_page_{page_number - 1}"))
+                builder.row(InlineKeyboardButton(text=f"< Предыдущая страница", callback_data=f"shopoperatorprev_page_{page_number - 1}"))
             if page_number < total_pages:
-                builder.row(InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"next_page_{page_number + 1}"))
+                builder.row(InlineKeyboardButton(text=f"> Следующая страница", callback_data=f"shopoperatornext_page_{page_number + 1}"))
             await call.message.edit_text(f"`{shop_operator.shop.name}`", reply_markup=builder.as_markup())
         await send_invoices_page(call, page_number, total_pages)
     else:
