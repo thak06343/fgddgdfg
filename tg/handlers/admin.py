@@ -451,7 +451,7 @@ async def admin_req_invoices(call: CallbackQuery):
 
     if navigation:
         builder.row(*navigation)
-    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admin_show_changer_{invoice.req.user.id}"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"admin_show_changer_{req.user.id}"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("admin_req_invoices_"))
