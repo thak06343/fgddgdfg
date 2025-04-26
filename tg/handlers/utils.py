@@ -298,7 +298,7 @@ async def create_ltc_invoice(amount_usd):
                         headers={'Content-Type': 'application/json'}
                 ) as response:
                     invoice_info = await response.json()
-            return invoice_info, ltc_amount
+            return invoice_info, ltc_amount + 0.00001
         except ClientConnectorError:
             return await create_ltc_invoice(amount_usd)
     else:
@@ -328,7 +328,7 @@ async def create_limit_invoice():
                         headers={'Content-Type': 'application/json'}
                 ) as response:
                     invoice_info = await response.json()
-            return invoice_info, ltc_amount
+            return invoice_info, ltc_amount + 0.00001
         except ClientConnectorError:
             return await create_ltc_invoice(amount_usd)
     else:

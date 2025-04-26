@@ -291,13 +291,12 @@ async def close_all_reqs(call: CallbackQuery, bot: Bot):
             print(e)
         invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
 
-        ltc_amount_rounded = round(ltc_amount, 6)
-        ltc_amount_safe = ltc_amount_rounded + 0.000001  # защита от partpaid
+
 
         invoice_id = invoice_info['invoice']
         ltc_address = invoice_info['address']
         expire = invoice_info['expire']
-        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount_safe)
+        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount)
         await sync_to_async(pack.invoices.add)(*invoice_list)
         iso_expire_time = expire
         dt = datetime.fromisoformat(iso_expire_time)
@@ -305,7 +304,7 @@ async def close_all_reqs(call: CallbackQuery, bot: Bot):
         message = (
             f"🧾 <b>Заявка №{pack.id}</b>\n\n"
             f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
-            f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
+            f"🪙 Сумма в LTC: <b>{ltc_amount:.7f} LTC</b>\n\n"
             f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
             f"⏳ Действителен до: <b>{formatted_time}</b>\n"
         )
@@ -335,14 +334,11 @@ async def send_to_bank_req(call: CallbackQuery, bot: Bot):
 
         invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
 
-        ltc_amount_rounded = round(ltc_amount, 6)
-        ltc_amount_safe = ltc_amount_rounded + 0.000001
-
         invoice_id = invoice_info['invoice']
         ltc_address = invoice_info['address']
         expire = invoice_info['expire']
         pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
-                                                                  ltc_amount=ltc_amount_safe)
+                                                                  ltc_amount=ltc_amount)
         await sync_to_async(pack.invoices.add)(*invoice_list)
         iso_expire_time = expire
         dt = datetime.fromisoformat(iso_expire_time)
@@ -350,7 +346,7 @@ async def send_to_bank_req(call: CallbackQuery, bot: Bot):
         message = (
             f"🧾 <b>Заявка №{pack.id}</b>\n\n"
             f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
-            f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
+            f"🪙 Сумма в LTC: <b>{ltc_amount:.7f} LTC</b>\n\n"
             f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
             f"⏳ Действителен до: <b>{formatted_time}</b>\n"
         )
@@ -391,8 +387,7 @@ async def back_to_settings(call: CallbackQuery):
 async def hoja_limit(call: CallbackQuery, bot: Bot):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     invoice_info, ltc_amount = await create_limit_invoice()
-    ltc_amount_rounded = round(ltc_amount, 6)
-    ltc_amount_safe = ltc_amount_rounded + 0.000001
+
 
     invoice_id = invoice_info['invoice']
     ltc_address = invoice_info['address']
@@ -400,11 +395,11 @@ async def hoja_limit(call: CallbackQuery, bot: Bot):
     iso_expire_time = expire
     dt = datetime.fromisoformat(iso_expire_time)
     formatted_time = dt.strftime("%d %B %Y, %H:%M")
-    pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount_safe)
+    pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address, ltc_amount=ltc_amount)
     message = (
         f"🧾 <b>Заявка №{pack.id}</b>\n\n"
         f"💵 Сумма в USD: <b>{round(50, 2)} $</b>\n"
-        f"🪙 Сумма в LTC: <b>{ltc_amount_safe:.6f} LTC</b>\n\n"
+        f"🪙 Сумма в LTC: <b>{ltc_amount:.8f} LTC</b>\n\n"
         f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
         f"⏳ Действителен до: <b>{formatted_time}</b>\n"
     )
