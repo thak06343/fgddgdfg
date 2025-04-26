@@ -459,11 +459,39 @@ async def manage_req(call: CallbackQuery, state: FSMContext):
     last_digits = req.cart
     text = (f"{short_name} {last_digits}\n"
             f"${round(usdt, 2)} ({len(invs)})\n"
-            f"`{req.info if req.info else 'Без замеитки'}`")
+            f"`{req.info if req.info else 'Без заметки'}`")
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
     builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'}", callback_data=f"activate_req_{req.id}"))
-    builder.add(InlineKeyboardButton(text="❌ Удалить", callback_data=f"changer_archive_req_{req.id}"))
+    if not req.archived:
+        text += "\n\n❌ Удален"
+        builder.add(InlineKeyboardButton(text="❌ Удалить", callback_data=f"changer_archive_req_{req.id}"))
+    if req.archived:
+        builder.add(InlineKeyboardButton(text="🟢 Восстановить", callback_data=f"changer_restore_req_{req.id}"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
+    builder.adjust(1)
+    await call.message.edit_text(text=text, parse_mode="Markdown", reply_markup=builder.as_markup())
+    await state.clear()
+
+@router.callback_query(F.data.startswith("changer_restore_req_"))
+async def changer_restore_req(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    req = await sync_to_async(Req.objects.get)(id=data[3])
+    usdt, invs = await req_invoices(req)
+    short_name = req.name[:3].upper()
+    last_digits = req.cart
+    text = (f"{short_name} {last_digits}\n"
+            f"${round(usdt, 2)} ({len(invs)})\n"
+            f"`{req.info if req.info else 'Без заметки'}`")
+
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'}", callback_data=f"activate_req_{req.id}"))
+    if not req.archived:
+        text += "\n\n❌ Удален"
+        builder.add(InlineKeyboardButton(text="❌ Удалить", callback_data=f"changer_archive_req_{req.id}"))
+    if req.archived:
+        builder.add(InlineKeyboardButton(text="🟢 Восстановить", callback_data=f"changer_restore_req_{req.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
     builder.adjust(1)
     await call.message.edit_text(text=text, parse_mode="Markdown", reply_markup=builder.as_markup())
