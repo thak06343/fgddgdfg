@@ -4,8 +4,7 @@ from .models import TGUser, Invoice, Req, ReqUsage, OperatorClientChat, Course, 
 
 @admin.register(TGUser)
 class TGUserAdmin(admin.ModelAdmin):
-    list_display = ['id', 'username' if 'username' else 'first_name']
-
+    list_display = ['id', 'username' if 'username' else 'first_name', 'is_changer']
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
