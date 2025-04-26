@@ -50,7 +50,7 @@ def count_invoices_for_operator(operator):
 @router.callback_query(F.data.startswith("shop_operator_all_invoices"))
 async def shop_operator_all_invoices(call: CallbackQuery):
     data = call.data.split("_")
-    page = int(data[3]) if len(data) > 3 else 1
+    page = int(data[4]) if len(data) > 4 else 1
     per_page = 30
     offset = (page - 1) * per_page
 

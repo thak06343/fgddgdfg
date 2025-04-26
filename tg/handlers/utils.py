@@ -532,31 +532,56 @@ async def transfer_to_admin(satoshi, ltc_req, wid):
                 return error_message
 
 
+# async def format_transfer_result(data: dict) -> str:
+#     try:
+#         destinations = data.get('destinations', [])
+#         if not destinations:
+#             return "❌ Ошибка: нет данных о переводе."
+#
+#         dest = destinations[0]
+#         address = dest.get('address') or "-"
+#         raw_amount = dest.get('amount', 0)
+#
+#         try:
+#             amount = float(raw_amount)
+#         except (ValueError, TypeError):
+#             amount = 0.0
+#
+#
+#         if amount > 10000:
+#             amount_ltc = amount / 100_000_000
+#         else:
+#             amount_ltc = amount
+#
+#         text = (
+#             f"✅ Переведено **{amount_ltc} LTC**\n"
+#             f"📍 На адрес: `{address}`"
+#         )
+#         return text
+#     except Exception as e:
+#         return f"❌ Ошибка обработки данных перевода: {e}"
+
 async def format_transfer_result(data: dict) -> str:
     try:
-        destinations = data.get('destinations', [])
-        if not destinations:
+        items = data.get('items', [])
+        if not items:
             return "❌ Ошибка: нет данных о переводе."
 
-        dest = destinations[0]
-        address = dest.get('address') or "-"
-        raw_amount = dest.get('amount', 0)
+        last_item = items[-1]
+
+        address = last_item.get('address') or "-"
+        raw_amount = last_item.get('amount', 0)
 
         try:
-            amount = float(raw_amount)
+            amount_ltc = float(raw_amount) / 100_000_000
         except (ValueError, TypeError):
-            amount = 0.0
-
-
-        if amount > 10000:
-            amount_ltc = amount / 100_000_000
-        else:
-            amount_ltc = amount
+            amount_ltc = 0.0
 
         text = (
-            f"✅ Переведено **{amount_ltc} LTC**\n"
+            f"✅ Переведено: **{amount_ltc:.8f} LTC**\n"
             f"📍 На адрес: `{address}`"
         )
+
         return text
     except Exception as e:
         return f"❌ Ошибка обработки данных перевода: {e}"
