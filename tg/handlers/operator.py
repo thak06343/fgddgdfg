@@ -639,7 +639,7 @@ async def in_mode_accept(call: CallbackQuery, state: FSMContext):
     await state.set_state(OperatorModeState.awaiting_amount)
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="✅", callback_data=f"{call.data}"))
-    await call.message.answer(f"Укажите сколько пришло:")
+    await call.message.answer(f"Укажите сколько пришло в вашей валюте:")
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.message(OperatorModeState.awaiting_amount)
@@ -666,13 +666,18 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
             all_current_invoices = operator_mode.invoices.all()
             balance = await operator_mode_invoice_balances(all_current_invoices)
             await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${round(invoice.amount_in_usdt, 2)} (${int(balance)})")
+
             try:
                 await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
                                                message_id=msg.message_id)
             except Exception as e:
                 print(e)
+
             if balance >= operator_mode.max_amount:
                 await bot.send_message(chat_id=check_chat_id, text="Вы достигли лимита, поменяйте реквизит!")
+            usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
+            usage.active = False
+            usage.save()
         await state.clear()
 
     except Exception as e:
