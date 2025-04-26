@@ -172,3 +172,9 @@ class OperatorMode(models.Model):
 
 class ApiAccount(models.Model):
     account = models.CharField(max_length=255, null=True, blank=True)
+
+class OneTimeReq(models.Model):
+    one_req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True)
+    active = models.BooleanField(default=True)
+    gte = models.IntegerField()
+    lte = models.IntegerField()

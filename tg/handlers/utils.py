@@ -87,17 +87,17 @@ async def pay_checker(invoice, msg, bot, chat):
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
             req_usage = await sync_to_async(ReqUsage.objects.get)(id=new_req_usage.id)
             if invoice.status == "deleted":
-                new_req_usage.status = "deleted"
-                new_req_usage.active = False
-                await sync_to_async(new_req_usage.save)()
+                req_usage.status = "deleted"
+                req_usage.active = False
+                await sync_to_async(req_usage.save)()
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
             if secs >= 1800 and not timeout and req_usage.status != "photo_sent":
-                new_req_usage.status = "timeout"
-                new_req_usage.active = False
+                req_usage.status = "timeout"
+                req_usage.active = False
                 timeout = True
-                new_req_usage.save()
+                req_usage.save()
                 await msg.answer("Время просрочено, реквизиты не актуальны!")
             if secs >= 1200 and not timeout and req_usage.status == "photo_sent" and not napomnil:
                 try:
@@ -110,9 +110,9 @@ async def pay_checker(invoice, msg, bot, chat):
                 break
             if invoice.accepted:
                 await msg.answer("✅")
-                new_req_usage.status = "finish"
-                new_req_usage.active = False
-                await sync_to_async(new_req_usage.save)()
+                req_usage.status = "finish"
+                req_usage.active = False
+                await sync_to_async(req_usage.save)()
                 changer = invoice.req.user
                 usage_reqs = await sync_to_async(ReqUsage.objects.filter)(active=True, usage_req__user=changer)
                 if not await sync_to_async(usage_reqs.exists)():
