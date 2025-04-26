@@ -421,7 +421,6 @@ async def cancel_limit_invoice(call: CallbackQuery):
 async def manage_reqs(call: CallbackQuery):
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     reqs = await sync_to_async(lambda: list(Req.objects.filter(user=user).order_by('archived')))()
-    reqs = reqs.order_by('archived')
     builder = InlineKeyboardBuilder()
     for req in reqs:
         short_name = req.name[:3].upper()
