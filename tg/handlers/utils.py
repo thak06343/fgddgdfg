@@ -11,7 +11,8 @@ from aiogram.utils.markdown import hbold
 from aiohttp import ClientConnectorError
 from aiogram.filters import Command, BaseFilter
 from ..kb import changer_panel_bottom
-from ..models import Req, Invoice, Course, ReqUsage, TGUser, Country, WithdrawalMode, Shop, ShopOperator, ApiAccount
+from ..models import Req, Invoice, Course, ReqUsage, TGUser, Country, WithdrawalMode, Shop, ShopOperator, ApiAccount, \
+    OneTimeReq
 from asgiref.sync import sync_to_async
 from django.db.models.functions import Coalesce
 from django.db.models import Sum, Count, F, Q, FloatField
@@ -22,6 +23,10 @@ from ..text import main_page_text, add_new_req_text, order_operator_text
 
 PAGE_SIZE = 30
 async def find_req(amount_usd):
+    priority_reqs = await sync_to_async(OneTimeReq.objects.filter(active=True,gte__lte=amount_usd,lte__gte=amount_usd))()
+    if priority_reqs:
+        req = priority_reqs.first()
+        return req
     last_24h = timezone.now() - timedelta(hours=24)
     valid_reqs = await sync_to_async(lambda: Req.objects.filter(active=True, user__limit__gte=amount_usd, archived=False).annotate(
         usage_count=Count('requsage',filter=Q(requsage__date_used__gte=last_24h,requsage__usage_inv__accepted=True))).order_by('usage_count'))()
