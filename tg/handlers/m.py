@@ -37,7 +37,6 @@ async def one_time_req(msg: Message, args: CommandObject):
             return
 
         try:
-
             req = await sync_to_async(lambda: Req.objects.filter(cart__endswith=cart_digits, user=user).first())()
 
             if not req:
