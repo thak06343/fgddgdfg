@@ -86,5 +86,5 @@ async def start(msg: Message, command: CommandObject, bot: Bot, state: FSMContex
     if shops:
         shop = shops.first()
         shop_panel_markup = await shop_panel()
-        await msg.answer(f"---`{shop.name.upper()}`---", parse_mode="Markdown", reply_markup=shop_panel_markup)
+        await msg.answer(f"---", parse_mode="Markdown", reply_markup=shop_panel_markup)
 
