@@ -417,16 +417,35 @@ async def cancel_limit_invoice(call: CallbackQuery):
     await call.message.delete()
     await call.message.answer("✔️ _Заявка на повышение лимита отменена!_", parse_mode="Markdown")
 
-@router.callback_query(F.data == "manage_reqs")
+
+@sync_to_async
+def get_user_reqs(user_id, offset, limit):
+    return list(Req.objects.filter(user__user_id=user_id).order_by('archived')[offset:offset + limit])
+
+@sync_to_async
+def count_user_reqs(user_id):
+    return Req.objects.filter(user__user_id=user_id).count()
+
+@router.callback_query(F.data.startswith("manage_reqs"))
 async def manage_reqs(call: CallbackQuery):
-    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
-    reqs = await sync_to_async(lambda: list(Req.objects.filter(user=user).order_by('archived')))()
+    data = call.data.split("_")
+    page = int(data[2]) if len(data) > 2 else 1
+    per_page = 30
+    offset = (page - 1) * per_page
+
+    total = await count_user_reqs(user_id=call.message.from_user.id)
+    reqs = await get_user_reqs(call.message.from_user.id, offset, per_page)
+
     builder = InlineKeyboardBuilder()
     for req in reqs:
         short_name = req.name[:3].upper()
         last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
         builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits} "
                                               f"{'🔒' if req.archived else ' '}", callback_data=f"manage_req_{req.id}"))
+    if page > 1:
+        builder.add(InlineKeyboardButton(text="⬅️", callback_data=f"manage_reqs_{page - 1}"))
+    if offset + per_page < total:
+        builder.add(InlineKeyboardButton(text="➡️", callback_data=f"manage_reqs_{page + 1}"))
     builder.adjust(2)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_settings"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
