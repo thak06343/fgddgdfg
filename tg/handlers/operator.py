@@ -283,6 +283,12 @@ async def close_all_reqs(call: CallbackQuery, bot: Bot):
         list(Invoice.objects.filter(accepted=True, sent_bank=False, req__user=user))
     ))()
     if total_amount_val and invoice_list:
+        try:
+            active_wm = await sync_to_async(WithdrawalMode.objects.filter)(user=user, active=True)
+            if active_wm:
+                return
+        except Exception as e:
+            print(e)
         invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
 
         ltc_amount_rounded = round(ltc_amount, 6)
@@ -320,6 +326,13 @@ async def send_to_bank_req(call: CallbackQuery, bot: Bot):
         list(Invoice.objects.filter(accepted=True, sent_bank=False, req__user=user))
     ))()
     if total_amount_val and invoice_list:
+        try:
+            active_wm = await sync_to_async(WithdrawalMode.objects.filter)(user=user, active=True)
+            if active_wm:
+                return
+        except Exception as e:
+            print(e)
+
         invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
 
         ltc_amount_rounded = round(ltc_amount, 6)

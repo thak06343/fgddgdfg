@@ -859,7 +859,7 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
         text = msg.text.strip()
         if len(text) == 4:
             try:
-                req = await sync_to_async(Req.objects.filter)(cart__endswith=text)
+                req = await sync_to_async(lambda: Req.objects.filter(cart__endswith=text).first())()
                 if req:
                     req = req.first()
                     data = await state.get_data()
@@ -894,7 +894,7 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
                     await msg.answer("Владелец не найден")
                     await state.clear()
             except Exception as e:
-                await msg.answer(e)
+                print(e)
         else:
             await msg.answer("Ошибка, попробуйте заново")
             await state.clear()

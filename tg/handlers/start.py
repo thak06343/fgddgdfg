@@ -30,8 +30,8 @@ class HasActiveInvoiceFilter(BaseFilter):
         return await sync_to_async(WithdrawalMode.objects.filter(user=user, active=True).exists)()
 
 @router.message(HasActiveInvoiceFilter())
-async def send_invoice_reminder(message: Message):
-    user_id = message.from_user.id
+async def send_invoice_reminder(msg: Message):
+    user_id = msg.from_user.id
     user = await sync_to_async(lambda: TGUser.objects.get(user_id=user_id))()
     mode = await sync_to_async(lambda: WithdrawalMode.objects.filter(user=user, active=True).prefetch_related('invoices').first())()
 
@@ -39,13 +39,11 @@ async def send_invoice_reminder(message: Message):
     ltc_address = mode.requisite
     ltc_amount = mode.ltc_amount
 
-    msg = (
-        f"🧾 <b>Ваш активный счёт на оплату</b>\n\n"
+    text = (f"🧾 <b>Ваш активный счёт на оплату</b>\n\n"
         f"🪙 Сумма в LTC: <b>{ltc_amount} LTC</b>\n\n"
-        f"📬 LTC-адрес для оплаты:\n<code>{ltc_address}</code>\n"
-    )
+        f"📬 LTC-адрес для оплаты:\n<code>{ltc_address}</code>\n")
 
-    await message.answer(msg, parse_mode="HTML")
+    await msg.answer(text, parse_mode="HTML")
 
 @router.message(Command("start"))
 async def start(msg: Message, command: CommandObject, bot: Bot, state: FSMContext):
