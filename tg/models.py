@@ -102,7 +102,7 @@ class Invoice(models.Model):
     shop_operator = models.ForeignKey(ShopOperator, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.accepted} {self.amount_in_kzt} {self.amount_in_usdt} {self.status}  {self.req}"
+        return f"{self.id} {self.accepted} {self.amount_in_kzt} {self.amount_in_usdt} {self.status}  {self.req} {self.shop}"
 
 class ReqUsage(models.Model):
     usage_req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True)

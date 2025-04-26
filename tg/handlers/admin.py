@@ -660,8 +660,10 @@ async def admin_invoice(call: CallbackQuery):
     data = call.data.split("_")
     invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
     text = admin_invoice_text.format(operator=invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name,
-                                     shop=invoice.shop.name.upper(), amount=round(invoice.amount_in_kzt, 2) if invoice.amount_in_kzt else 'уточняется', date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
-                                     amount_kgs=round(invoice.amount_in_fiat, 2), amount_usdt=round(invoice.amount_in_usdt_for_changer, 2))
+                                     shop=invoice.shop.name.upper(), amount=round(invoice.amount_in_kzt, 2) if invoice.amount_in_kzt else 'уточняется',
+                                     date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
+                                     amount_kgs=round(invoice.amount_in_fiat, 2) if invoice.amount_in_fiat else 'уточняется',
+                                     amount_usdt=round(invoice.amount_in_usdt_for_changer, 2) if invoice.amount_in_usdt_for_changer else 'уточняется')
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text=f"Принять от имени {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}",
                                      callback_data=f"admin_accept_invoice_{invoice.id}"))
