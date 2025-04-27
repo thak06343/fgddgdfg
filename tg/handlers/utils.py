@@ -23,7 +23,7 @@ from ..text import main_page_text, add_new_req_text, order_operator_text
 
 PAGE_SIZE = 30
 async def find_req(amount_usd):
-    priority_reqs = await sync_to_async(OneTimeReq.objects.filter(active=True,gte__lte=amount_usd,lte__gte=amount_usd))()
+    priority_reqs = await sync_to_async(OneTimeReq.objects.filter)(active=True,gte__lte=amount_usd,lte__gte=amount_usd)
     if priority_reqs:
         req = priority_reqs.first()
         return req
