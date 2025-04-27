@@ -420,11 +420,12 @@ async def cancel_limit_invoice(call: CallbackQuery):
 
 @sync_to_async
 def get_user_reqs(user_id, offset, limit):
-    return list(Req.objects.filter(user__user_id=user_id).order_by('archived')[offset:offset + limit])
+    return list(Req.objects.filter(user__user_id=str(user_id)).order_by('archived')[offset:offset + limit])
+
 
 @sync_to_async
 def count_user_reqs(user_id):
-    return Req.objects.filter(user__user_id=user_id).count()
+    return Req.objects.filter(user__user_id=str(user_id)).count()
 
 @router.callback_query(F.data.startswith("manage_reqs"))
 async def manage_reqs(call: CallbackQuery):
