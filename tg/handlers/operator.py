@@ -434,8 +434,8 @@ async def manage_reqs(call: CallbackQuery):
     per_page = 30
     offset = (page - 1) * per_page
 
-    total = await count_user_reqs(user_id=call.message.from_user.id)
-    reqs = await get_user_reqs(call.message.from_user.id, offset, per_page)
+    total = await count_user_reqs(user_id=call.from_user.id)
+    reqs = await get_user_reqs(call.from_user.id, offset, per_page)
 
     builder = InlineKeyboardBuilder()
     for req in reqs:
