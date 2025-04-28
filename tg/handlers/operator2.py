@@ -207,11 +207,16 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
                                              callback_data=f"in_mode_accept_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
             builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}"))
             builder.adjust(1)
+
             if msg.photo:
                 file_id = msg.photo[-1].file_id
                 await bot.send_photo(chat_id=req.user.user_id, photo=file_id,reply_markup=builder.as_markup())
             else:
-                file_id = msg.document.file_id
-                await bot.send_document(chat_id=req.user.user_id, document=file_id,reply_markup=builder.as_markup())
+                try:
+                    file_id = msg.document.file_id
+                    await bot.send_document(chat_id=req.user.user_id, document=file_id,reply_markup=builder.as_markup())
+                except Exception as e:
+                    file_id = None
             new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=new_invoice,
-                                                                     status="in_operator_mode", usage_req=req, photo=file_id)
+                                                                     status="in_operator_mode", usage_req=req,
+                                                                     photo=file_id)
