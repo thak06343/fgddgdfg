@@ -26,6 +26,7 @@ async def find_req(amount_usd):
     priority_reqs = await sync_to_async(OneTimeReq.objects.filter)(active=True,gte__lte=amount_usd,lte__gte=amount_usd)
     if priority_reqs:
         req = priority_reqs.first()
+        req = req.one_req
         return req
     last_24h = timezone.now() - timedelta(hours=24)
     valid_reqs = await sync_to_async(lambda: Req.objects.filter(active=True, user__limit__gte=amount_usd, archived=False).annotate(
@@ -286,7 +287,7 @@ async def create_ltc_invoice(amount_usd):
         invoice_data = {
             "amount": amount_in_microunits,
             "currency": "ltc",
-            "lifetime": 43200,
+            "lifetime": 1800,
             "callback_url": "http://example.com/callback",
         }
 
@@ -317,7 +318,7 @@ async def create_limit_invoice():
         invoice_data = {
             "amount": amount_in_microunits,
             "currency": "ltc",
-            "lifetime": 43200,
+            "lifetime": 1800,
             "callback_url": "http://example.com/callback",
         }
         try:
@@ -567,29 +568,16 @@ async def transfer_to_admin(satoshi, ltc_req, wid):
 #         return f"❌ Ошибка обработки данных перевода: {e}"
 
 async def format_transfer_result(data: dict) -> str:
-    try:
-        items = data.get('items', [])
-        if not items:
-            return "❌ Ошибка: нет данных о переводе."
-
-        last_item = items[-1]
-
-        address = last_item.get('address') or "-"
-        raw_amount = last_item.get('amount', 0)
-
         try:
-            amount_ltc = float(raw_amount) / 100_000_000
-        except (ValueError, TypeError):
-            amount_ltc = 0.0
+            txs = data.get('txs')
+            if not txs:
+                raise ValueError("В ответе нет транзакций (txs).")
+            text = f"https://blockchair.com/{txs[0]}"
+            return text
+        except Exception as e:
+            return f"Ошибка при извлечении TXID: {e}"
 
-        text = (
-            f"✅ Переведено: **{amount_ltc:.8f} LTC**\n"
-            f"📍 На адрес: `{address}`"
-        )
 
-        return text
-    except Exception as e:
-        return f"❌ Ошибка обработки данных перевода: {e}"
 
 async def operator_invoices(operator):
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=operator)

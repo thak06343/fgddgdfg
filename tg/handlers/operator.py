@@ -693,7 +693,7 @@ async def in_mode_accept(call: CallbackQuery, state: FSMContext):
     await state.update_data(invoice_id=data[3], check_chat_id=data[4], check_message_id=data[5], operator_mode_id=data[6])
     await state.set_state(OperatorModeState.awaiting_amount)
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="✅", callback_data=f"{call.data}"))
+    builder.add(InlineKeyboardButton(text=f"✅", callback_data=f"{call.data}"))
     await call.message.answer(f"Укажите сколько пришло в вашей валюте:")
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
