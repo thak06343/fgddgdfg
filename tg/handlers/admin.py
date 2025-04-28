@@ -842,6 +842,9 @@ async def decline_invoice_admin(call: CallbackQuery):
     invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
     invoice.status = "deleted"
     invoice.save()
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Обновить", callback_data=f"admin_invoice_{invoice.id}"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
     await call.answer("Инвойс удалён!", show_alert=True)
 
 class Admin4Digits(StatesGroup):
