@@ -293,8 +293,9 @@ async def admin_active_usages(call: CallbackQuery):
             builder = InlineKeyboardBuilder()
             for usage in usage_page:
                 active_not = ''
-                if usage.usage_inv.accepted:
-                    active_not += "✅"
+                if usage.usage_inv:
+                    if usage.usage_inv.accepted:
+                        active_not += "✅"
                 if usage.active:
                     active_not += "♻️"
                 if usage.photo:

@@ -175,6 +175,8 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
                 await state.set_state(OperatorModeState.in_mode)
                 await msg.answer(text, reply_markup=shop_operator_bottoms)
                 await msg.answer(text2)
+    else:
+        await msg.answer("no req")
 
 
 @router.message(OperatorModeState.in_mode)
