@@ -612,13 +612,21 @@ async def operator_invoices(operator):
         list(Invoice.objects.filter(accepted=True, shop=shop_operator.shop))
     ))()
     return usdt_balance, invoice_list
-
+async def sheff_balance():
+    usdt_balance, invoice_list = await sync_to_async(lambda: (
+        Invoice.objects.filter(accepted=True, sent_sheff=False)
+        .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
+        list(Invoice.objects.filter(accepted=True, sent_sheff=False))
+    ))()
+    return usdt_balance, invoice_list
 async def shop_balances(shop):
     usdt_balance, invoice_list = await sync_to_async(lambda: (
         Invoice.objects.filter(accepted=True, shop=shop, sent_shop=False)
         .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
         list(Invoice.objects.filter(accepted=True, shop=shop, sent_shop=False))
     ))()
+    after_prc = usdt_balance / 100 * shop.prc
+    usdt_balance = usdt_balance - after_prc
     return usdt_balance
 
 async def req_invoices(req):

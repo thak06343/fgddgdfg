@@ -484,7 +484,8 @@ async def changer_restore_req(call: CallbackQuery, state: FSMContext):
     text = (f"{short_name} {last_digits}\n"
             f"${round(usdt, 2)} ({len(invs)})\n"
             f"`{req.info if req.info else 'Без заметки'}`")
-
+    req.archived = False
+    req.save()
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
     builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'}", callback_data=f"activate_req_{req.id}"))

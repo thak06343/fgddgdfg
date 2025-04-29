@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter, Command
 from asgiref.sync import sync_to_async
 from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val, \
-    changers_current_balance, IsLtcReq, changers_currents_balance
+    changers_current_balance, IsLtcReq, changers_currents_balance, shop_balances, sheff_balance
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo, Shop, ReqUsage
 from ..text import admin_invoice_text
 
@@ -926,8 +926,18 @@ async def zp(msg: Message):
         all_awaiting_usdts += awaiting_invoices
         all_accepted_balance += total_ready_to_send
 
-    text = f"Сумма на счета у операторов: {round(all_amount_in_card, 2)}\n"
-    text += f"Сумма ожидающих инвойсов: {round(all_awaiting_usdts, 2)}\n\n"
-    text += f"Всего доступно на вывод: {round(all_accepted_balance)}\n\n"
+    text = f"Сумма на счета у операторов: ${round(all_amount_in_card, 2)}\n"
+    text += f"Сумма ожидающих инвойсов: ${round(all_awaiting_usdts, 2)}\n\n"
+    text += f"Всего доступно на вывод: ${round(all_accepted_balance)}\n\n"
 
     shops = await sync_to_async(Shop.objects.all)()
+    shop_balance = 0
+    for shop in shops:
+        shop_bal = await shop_balances(shop)
+        shop_balance += shop_bal
+    text += f"Всего на балансе у шопов ${round(shop_balance, 2)}\n\n"
+    shef_balance = await sheff_balance()
+    text += f"Мэйн баланс: {round(shef_balance, 2)}\n"
+    await msg.answer(text)
+
+
