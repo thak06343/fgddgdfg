@@ -6,8 +6,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 import os
 from dotenv import load_dotenv
 
-from .admin import awaiting_digits
-
 load_dotenv()
 import aiohttp
 from aiogram.utils.markdown import hbold
