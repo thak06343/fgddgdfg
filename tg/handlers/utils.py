@@ -5,6 +5,9 @@ from aiogram.types import InlineKeyboardButton, Message
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 import os
 from dotenv import load_dotenv
+
+from .admin import awaiting_digits
+
 load_dotenv()
 import aiohttp
 from aiogram.utils.markdown import hbold
@@ -148,6 +151,28 @@ async def balance_val(user):
         lambda: ReqUsage.objects.filter(active=True, usage_req__user=user).aggregate(
             total=Coalesce(Sum('usage_inv__amount_in_usdt'), 0, output_field=FloatField()))['total'])()
     return total_amount_val, awaiting_usdt
+
+async def changers_currents_balance(user):
+    total_amount_val = await sync_to_async(lambda: Invoice.objects.filter(accepted=True, sent_bank=True,
+                                                                          req__user=user, sent_changer=False).aggregate(
+        total=Coalesce(Sum('amount_in_usdt_for_changer'), 0,
+                       output_field=FloatField()))['total'])()
+    balance = total_amount_val / 100 * user.prc
+    ref_val = await sync_to_async(lambda: Invoice.objects.filter(accepted=True, sent_bank=True,
+                                                                          req__user__ref_by=user, sent_ref=False).aggregate(
+        total=Coalesce(Sum('amount_in_usdt_for_changer'), 0,
+                       output_field=FloatField()))['total'])()
+    ref_balance = ref_val / 100 * 2
+    awaiting_usdt = await sync_to_async(
+        lambda: ReqUsage.objects.filter(active=True, usage_req__user=user).aggregate(
+            total=Coalesce(Sum('usage_inv__amount_in_usdt'), 0, output_field=FloatField()))['total'])()
+
+    total_ready_to_send = await sync_to_async(lambda: Invoice.objects.filter(accepted=True, sent_bank=False,
+                                                                          req__user=user).aggregate(
+        total=Coalesce(Sum('amount_in_usdt_for_changer'), 0,
+                       output_field=FloatField()))['total'])()
+
+    return balance, ref_balance, awaiting_usdt, total_ready_to_send
 
 async def changers_current_balance(user):
     total_amount_val = await sync_to_async(lambda: Invoice.objects.filter(accepted=True, sent_bank=True,
@@ -587,6 +612,14 @@ async def operator_invoices(operator):
         list(Invoice.objects.filter(accepted=True, shop=shop_operator.shop))
     ))()
     return usdt_balance, invoice_list
+
+async def shop_balances(shop):
+    usdt_balance, invoice_list = await sync_to_async(lambda: (
+        Invoice.objects.filter(accepted=True, shop=shop, sent_shop=False)
+        .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
+        list(Invoice.objects.filter(accepted=True, shop=shop, sent_shop=False))
+    ))()
+    return usdt_balance
 
 async def req_invoices(req):
     usdt_balance, invoice_list = await sync_to_async(lambda: (

@@ -6,7 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter, Command
 from asgiref.sync import sync_to_async
 from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val, \
-    changers_current_balance, IsLtcReq
+    changers_current_balance, IsLtcReq, changers_currents_balance
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo, Shop, ReqUsage
 from ..text import admin_invoice_text
 
@@ -912,5 +912,22 @@ async def admin_back_to_accept(call: CallbackQuery):
         InlineKeyboardButton(text="✅", callback_data=f"admin_accept_invoice_{data[4]}_{data[5]}"))
     builder.add(
         InlineKeyboardButton(text="❌", callback_data=f"admindecline_invoice_{data[4]}_{data[5]}"))
-    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())\
 
+@router.message(Command("zp"))
+async def zp(msg: Message):
+    changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
+    all_amount_in_card = 0
+    all_awaiting_usdts = 0
+    all_accepted_balance = 0
+    for changer in changers:
+        in_cards, ref_balance, awaiting_invoices, total_ready_to_send = await changers_currents_balance(changer)
+        all_awaiting_usdts += in_cards
+        all_awaiting_usdts += awaiting_invoices
+        all_accepted_balance += total_ready_to_send
+
+    text = f"Сумма на счета у операторов: {round(all_amount_in_card, 2)}\n"
+    text += f"Сумма ожидающих инвойсов: {round(all_awaiting_usdts, 2)}\n\n"
+    text += f"Всего доступно на вывод: {round(all_accepted_balance)}\n\n"
+
+    shops = await sync_to_async(Shop.objects.all)()
