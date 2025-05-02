@@ -618,6 +618,7 @@ async def sheff_balance():
         list(Invoice.objects.filter(accepted=True, sent_sheff=False))
     ))()
     return usdt_balance, invoice_list
+
 async def shop_balances(shop):
     usdt_balance, invoice_list = await sync_to_async(lambda: (
         Invoice.objects.filter(accepted=True, shop=shop, sent_shop=False)
