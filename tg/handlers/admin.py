@@ -787,6 +787,13 @@ async def admin_del_invoice(call: CallbackQuery):
     invoice.status = "deleted"
     invoice.save()
     await call.answer("Инвойс удалён!", show_alert=True)
+    try:
+        usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
+        if usage.status == "in_operator_mode":
+            usage.active = False
+            usage.save()
+    except Exception as e:
+        print(e)
 
 @router.callback_query(F.data.startswith("admindecline_invoice_"))
 async def decline_invoice_admin(call: CallbackQuery):
