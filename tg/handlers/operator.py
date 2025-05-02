@@ -579,13 +579,23 @@ async def activate_req_edit(call: CallbackQuery):
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("decline_invoice_"))
-async def decline_invoice(call: CallbackQuery):
+async def decline_invoice(call: CallbackQuery, bot: Bot):
     data = call.data.split("_")
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="Не пришло", callback_data=f"declineinvoice_notreceived_{data[2]}"))
-    builder.add(InlineKeyboardButton(text="Проблема с чеком", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
+    check_chat_id = data[3]
+    check_message_id = data[4]
+    operator_mode_id = data[6]
+    builder.add(InlineKeyboardButton(text="Информация отправлена", callback_data=f"gfdhfgjhfj"))
     builder.add(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{data[2]}"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    await bot.edit_message_text(chat_id=check_chat_id, message_id=int(check_message_id), text=f"+0")
+    try:
+        invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
+        usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
+        usage.active = False
+        usage.save()
+    except Exception as e:
+        print(e)
 
 @router.callback_query(F.data.startswith("declineinvoice_"))
 async def decline_invoice(call: CallbackQuery, bot: Bot):

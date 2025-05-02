@@ -97,6 +97,7 @@ async def pay_checker(invoice, msg, bot, chat):
                 req_usage.status = "deleted"
                 req_usage.active = False
                 req_usage.save()
+                await msg.answer("🚫 Платеж не принят!")
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
