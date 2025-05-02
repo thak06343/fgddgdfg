@@ -96,7 +96,7 @@ async def pay_checker(invoice, msg, bot, chat):
             if invoice.status == "deleted":
                 req_usage.status = "deleted"
                 req_usage.active = False
-                await sync_to_async(req_usage.save)()
+                req_usage.save()
                 break
             if req_usage.status == "photo_sent" and not photo_sent:
                 photo_sent = True
@@ -595,7 +595,7 @@ async def format_transfer_result(data: dict) -> str:
             txs = data.get('txs')
             if not txs:
                 raise ValueError("В ответе нет транзакций (txs).")
-            text = f"https://blockchair.com/{txs[0]}"
+            text = f"https://blockchair.com/litecoin/transaction/{txs[0]}"
             return text
         except Exception as e:
             return f"Ошибка при извлечении TXID: {e}"

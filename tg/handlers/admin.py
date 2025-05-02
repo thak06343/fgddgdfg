@@ -704,27 +704,26 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
         data = await state.get_data()
         invoice_id = data.get("invoice_id")
         invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
-        if amount <= invoice.amount_in_fiat:
-            reaction = ReactionTypeEmoji(emoji="👍")
-            try:
-                await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
+        reaction = ReactionTypeEmoji(emoji="👍")
+        try:
+            await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
                                                    message_id=msg.message_id)
-            except Exception as e:
-                print(e)
-            invoice.accepted = True
-            invoice.amount_in_fiat = amount
-            country = invoice.req.country
-            if country.country != "uzs":
-                fiat = amount
-                usdt_for_changer = fiat / country.fiat_to_usdt
-                usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
-            else:
-                fiat = amount
-                usdt_for_changer = fiat / country.fiat_to_usdt
-                usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
-            invoice.amount_in_usdt = usdt_for_shop
-            invoice.amount_in_usdt_for_changer = usdt_for_changer
-            invoice.save()
+        except Exception as e:
+            print(e)
+        invoice.accepted = True
+        invoice.amount_in_fiat = amount
+        country = invoice.req.country
+        if country.country != "uzs":
+            fiat = amount
+            usdt_for_changer = fiat / country.fiat_to_usdt
+            usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+        else:
+            fiat = amount
+            usdt_for_changer = fiat / country.fiat_to_usdt
+            usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+        invoice.amount_in_usdt = usdt_for_shop
+        invoice.amount_in_usdt_for_changer = usdt_for_changer
+        invoice.save()
         await state.clear()
     except Exception as e:
         print(e)
@@ -863,7 +862,7 @@ async def awaiting_digits(msg: Message, state: FSMContext, bot: Bot):
         text = msg.text.strip()
         if len(text) == 4:
             try:
-                req = await sync_to_async(lambda: Req.objects.filter(cart__endswith=text).first())()
+                req = await sync_to_async(lambda: Req.objects.filter(cart__endswith=str(text)).first())()
                 if req:
                     req = req.first()
                     data = await state.get_data()

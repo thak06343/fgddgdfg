@@ -203,7 +203,7 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
 
             check_msg = await msg.reply("♻️ На обработке")
 
-            builder.add(InlineKeyboardButton(text=f"✅ {short_name} *{last_digits}",
+            builder.add(InlineKeyboardButton(text=f"Указать сумму {short_name} *{last_digits}",
                                              callback_data=f"in_mode_accept_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
             builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}"))
             builder.adjust(1)
