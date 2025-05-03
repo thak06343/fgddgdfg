@@ -585,7 +585,6 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     if len(data) > 4:
         check_chat_id = data[3]
         check_message_id = data[4]
-        operator_mode_id = data[6]
         await bot.edit_message_text(chat_id=check_chat_id, message_id=int(check_message_id), text=f"+0")
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
