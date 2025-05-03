@@ -36,3 +36,13 @@ admin_invoice_text = (
     "💵 Сумма: `{amount_kgs} KGS`\n"
     "💵 Сумма: `{amount_usdt} USDT`\n"
 )
+
+changer_invoice_text = (
+    "♻️ *#Заявка*\n\n"
+    "👤 Оператор {operator}\n"
+    "🏪 Реквизит: {req}\n"
+    "📅 Дата: `{date}`\n\n"
+    "💵 Сумма: `{amount} KZT`\n"
+    "💵 Сумма: `{amount_kgs} KGS`\n"
+    "💵 Сумма: `{amount_usdt} USDT`\n"
+)

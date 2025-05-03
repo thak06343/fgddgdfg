@@ -8,15 +8,15 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ReactionTypeEmoji
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.filters import Filter
+from aiogram.filters import Filter, Command
 from asgiref.sync import sync_to_async
 from aiogram.utils.markdown import hbold, hitalic, hcode
 from .utils import changers_current_balance, balance_val, get_totals_reqs, req_adder, create_ltc_invoice, \
     check_invoice, create_limit_invoice, check_limit_invoice, get_ltc_usd_rate, transfer, changer_balance_with_invoices, \
-    req_invoices, IsLtcReq, operator_mode_invoice_balances
+    req_invoices, IsLtcReq, operator_mode_invoice_balances, PAGE_SIZE
 from ..kb import changer_panel_bottom
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, ReqUsage, OperatorMode
-from ..text import main_page_text, add_new_req_text, settings_text, shop_stats_text
+from ..text import main_page_text, add_new_req_text, settings_text, shop_stats_text, changer_invoice_text
 from django.db.models import Sum, Count, Q, FloatField
 from django.db.models.functions import Coalesce
 from datetime import datetime
@@ -759,3 +759,94 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
 
     except Exception as e:
         print(e)
+
+
+@router.message(Command("active"))
+async def active_invoices_changer(msg: Message):
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Все не принятые инвойсы", callback_data="all_changer_not_accepted_invoices"))
+    await msg.answer("Принять платежи", reply_markup=builder.as_markup())
+
+@sync_to_async
+def get_changer_invoices(changer, offset, limit):
+    return list(Invoice.objects.filter(req__user=changer, accepted=False).order_by('-date_used')[offset:offset + limit])
+
+@sync_to_async
+def count_changer_invoices(changer):
+    return Invoice.objects.filter(accepted=False, req__user=changer).count()
+
+@router.callback_query(F.data.startswith("all_changer_not_accepted_invoices"))
+async def all_changer_not_accepted_invoices(call: CallbackQuery):
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    data = call.data.split("_")
+    page = int(data[5]) if len(data) > 5 else 1
+    per_page = 30
+    offset = (page - 1) * per_page
+
+    total = await count_changer_invoices(user)
+    invoices = await get_changer_invoices(user, offset, per_page)
+
+    if not invoices:
+        await call.message.edit_text("No invoices found for this shop.")
+        return
+
+    builder = InlineKeyboardBuilder()
+    for invoice in invoices:
+        req_usage = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
+        active_not = ''
+        if req_usage:
+            req_usage = req_usage.first()
+            if req_usage.active:
+                active_not += "♻️"
+            if req_usage.photo:
+                active_not += "🖼"
+        if invoice.accepted:
+            active_not += "✅"
+        else:
+            active_not += "❌"
+        builder.add(
+            InlineKeyboardButton(text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
+                                 callback_data=f"changer_show_invoice_{invoice.id}"))
+    builder.adjust(2)
+    if page > 1:
+        builder.add(InlineKeyboardButton(text="⬅️", callback_data=f"all_changer_not_accepted_invoices_{page - 1}"))
+    if offset + per_page < total:
+        builder.add(InlineKeyboardButton(text="➡️", callback_data=f"all_changer_not_accepted_invoices_{page + 1}"))
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"all_changer_not_accepted_invoices"))
+
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("changer_show_invoice_"))
+async def changer_show_invoice(call: CallbackQuery):
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[3])
+    text = changer_invoice_text.format(operator=invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name,
+                                       amount=round(invoice.amount_in_kzt, 2) if invoice.amount_in_kzt else 'уточняется',
+                                     date=invoice.date_used.strftime('%d.%m.%Y %H:%M'), req=invoice.req.cart,
+                                     amount_kgs=round(invoice.amount_in_fiat, 2) if invoice.amount_in_fiat else 'уточняется',
+                                     amount_usdt=round(invoice.amount_in_usdt_for_changer, 2) if invoice.amount_in_usdt_for_changer else 'уточняется')
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Принять", callback_data=f"accept_invoice_{data[3]}"))
+    builder.add(InlineKeyboardButton(text="Отказать", callback_data=f"decline_invoice_{data[3]}"))
+    if invoice.status == "deleted" and not invoice.accepted:
+        text += "\n❌ Инвойс удален"
+    if invoice.accepted:
+        text += "\n\nИНВОЙС ПОДТВЕРЖДЕН!"
+
+    req_usages = await sync_to_async(lambda: ReqUsage.objects.filter(usage_inv=invoice, photo__isnull=False))()
+    for req_usage in req_usages:
+        if req_usage.photo:
+            builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"changer_show_photo_{req_usage.id}"))
+    builder.adjust(1)
+    builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="all_changer_not_accepted_invoices"))
+    await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+
+@router.callback_query(F.data.startswith("changer_show_photo_"))
+async def admin_show_photo(call: CallbackQuery):
+    data = call.data.split("_")
+    req_usage = await sync_to_async(ReqUsage.objects.get)(id=data[3])
+    try:
+        await call.message.answer_photo(req_usage.photo)
+    except Exception as e:
+        await call.message.answer_document(req_usage.photo)
