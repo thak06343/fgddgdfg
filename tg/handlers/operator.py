@@ -585,12 +585,16 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     if len(data) > 4:
         check_chat_id = data[3]
         check_message_id = data[4]
-        await bot.edit_message_text(chat_id=check_chat_id, message_id=int(check_message_id), text=f"+0")
+        try:
+            await bot.edit_message_text(chat_id=check_chat_id, message_id=int(check_message_id), text=f"+0")
+        except Exception as e:
+            await call.answer("Принято", show_alert=True)
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
             usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
             usage.active = False
             usage.save()
+
         except Exception as e:
             print(e)
     else:
