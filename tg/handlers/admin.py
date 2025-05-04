@@ -684,7 +684,7 @@ async def admin_invoice(call: CallbackQuery):
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text=f"✍️ Изменить сумму {invoice.req.country.country}", callback_data=f"admin_change_invoice_fiat_{invoice.id}"))
     builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="back_to_invoices"))
-    await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+    await call.message.edit_text(text=text, reply_markup=builder.as_markup())
 
 @router.callback_query(F.data.startswith("admin_deactivate_usage_"))
 async def admin_deactivate_usage(call: CallbackQuery):
