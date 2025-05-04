@@ -600,6 +600,7 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
     else:
         builder.add(InlineKeyboardButton(text="Фейковый чек", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
         builder.add(InlineKeyboardButton(text="На фото не чек", callback_data=f"declineinvoice_notreceived_{data[2]}"))
+        builder.add(InlineKeyboardButton(text="Не мой чек", callback_data=f"declineinvoice_notmine_{data[2]}"))
         builder.add(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{data[2]}"))
         builder.adjust(1)
         await call.message.edit_reply_markup(reply_markup=builder.as_markup())
@@ -842,7 +843,7 @@ async def changer_show_invoice(call: CallbackQuery):
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"changer_show_photo_{req_usage.id}"))
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="all_changer_not_accepted_invoices"))
-    await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+    await call.message.edit_text(text=text, reply_markup=builder.as_markup())
 
 
 @router.callback_query(F.data.startswith("changer_show_photo_"))

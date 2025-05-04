@@ -444,6 +444,9 @@ async def admin_balance(user):
         admin_bal = admin_bal / 100 * 1
         return admin_bal, admin_invoices
 
+
+
+
 async def transfer(satoshi, ltc_req, wid):
     transfer_key = os.getenv("TRANSFER_KEY")
     account = os.getenv("APIRONE_ACC")
@@ -611,6 +614,7 @@ async def operator_invoices(operator):
         list(Invoice.objects.filter(accepted=True, shop=shop_operator.shop))
     ))()
     return usdt_balance, invoice_list
+
 async def sheff_balance():
     usdt_balance, invoice_list = await sync_to_async(lambda: (
         Invoice.objects.filter(accepted=True, sent_sheff=False)
