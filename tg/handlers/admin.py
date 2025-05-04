@@ -680,11 +680,19 @@ async def admin_invoice(call: CallbackQuery):
     for req_usage in req_usages:
         if req_usage.photo:
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
-
+        builder.add(InlineKeyboardButton(text="Деактивация", callback_data=f"admin_deactivate_usage_{req_usage.id}"))
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text=f"✍️ Изменить сумму {invoice.req.country.country}", callback_data=f"admin_change_invoice_fiat_{invoice.id}"))
     builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="back_to_invoices"))
     await call.message.edit_text(text=text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+
+@router.callback_query(F.data.startswith("admin_deactivate_usage_"))
+async def admin_deactivate_usage(call: CallbackQuery):
+    data = call.data.split("_")
+    usage = await sync_to_async(ReqUsage.objects.get)(id=data[3])
+    usage.active = False
+    usage.save()
+    await call.answer("Инвойс деактивирован")
 
 @router.callback_query(F.data.startswith("admin_change_invoice_fiat_"))
 async def admin_change_invoice_fiat(call: CallbackQuery, state: FSMContext):
@@ -946,4 +954,17 @@ async def zp(msg: Message):
     text += f"Мэйн баланс: {round(shef_balance, 2)}\n"
     await msg.answer(text)
 
-
+@router.message(Command("sendchanger"))
+async def send_announce_to_changers(msg: Message, bot: Bot):
+    text = "❗️ Поступают заявки на обмен"
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Включить P2P режим", callback_data="on_off_p2p"))
+    count = 0
+    changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
+    for i in changers:
+        try:
+            await bot.send_message(chat_id=i.user_id, text=text, reply_markup=builder.as_markup())
+            count += 1
+        except Exception as e:
+            print(e)
+    await msg.answer(f"Отправлено {count} операторам!")
