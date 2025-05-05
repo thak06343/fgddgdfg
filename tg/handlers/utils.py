@@ -549,7 +549,7 @@ async def transfer_to_admin(satoshi, ltc_req, wid):
                 invoices = pack.invoices.all()
                 if invoices:
                     for i in invoices:
-                        i.sent_admin = True
+                        i.sent_sheff = True
                         i.save()
                 pack.active = False
                 pack.finish = True
@@ -635,7 +635,7 @@ async def sheff_balance():
                 print("OWIBKA", inv.id)
         else:
             print("OWIBKA", inv.id)
-    return a
+    return a, invoices
 
 async def shop_balances(shop):
     usdt_balance, invoice_list = await sync_to_async(lambda: (

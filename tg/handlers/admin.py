@@ -25,7 +25,7 @@ router.message.filter(IsAdmin())
 @router.message(F.text == "🐙 Главное")
 async def main_admin(msg: Message):
     user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
-    balance, adm_invoices =  await admin_balance(user)
+    balance, invs = await sheff_balance()
     text = f"💰 *Баланс:* *${round(balance, 2)}*\n"
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="⚡️ 𝑳𝑻𝑪", callback_data=f"admin_order_to_withdraw"))
@@ -48,7 +48,7 @@ async def awaiting_ltc_to_send_shop(msg: Message, state: FSMContext):
         is_ltc_req = await IsLtcReq(ltc_address)
         if is_ltc_req:
             await state.clear()
-            balance, adm_invoices =  await admin_balance(user)
+            balance, adm_invoices =  await sheff_balance()
             try:
                 ltc_usdt_price = await get_ltc_usd_rate()
             except Exception as e:
