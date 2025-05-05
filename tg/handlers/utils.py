@@ -621,7 +621,15 @@ async def sheff_balance():
         .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
         list(Invoice.objects.filter(accepted=True, sent_sheff=False))
     ))()
-    return usdt_balance, invoice_list
+    invoices = await sync_to_async(Invoice.objects.filter)(accepted=True, sent_sheff=False)
+    a = 0
+    for inv in invoices:
+        shop_prc = inv.shop.prc
+        changer_prc = inv.req.user.prc
+        avialable_prc = shop_prc - changer_prc - 1
+        summa = inv.amount_in_usdt_for_changer / 100 * avialable_prc
+        a += summa
+    return a
 
 async def shop_balances(shop):
     usdt_balance, invoice_list = await sync_to_async(lambda: (
