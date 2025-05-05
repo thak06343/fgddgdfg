@@ -930,28 +930,28 @@ async def admin_back_to_accept(call: CallbackQuery):
 
 @router.message(Command("zp"))
 async def zp(msg: Message):
-    changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
-    all_amount_in_card = 0
-    all_awaiting_usdts = 0
-    all_accepted_balance = 0
-    for changer in changers:
-        in_cards, ref_balance, awaiting_invoices, total_ready_to_send = await changers_currents_balance(changer)
-        all_awaiting_usdts += in_cards
-        all_awaiting_usdts += awaiting_invoices
-        all_accepted_balance += total_ready_to_send
-
-    text = f"Сумма на счета у операторов: ${round(all_amount_in_card, 2)}\n"
-    text += f"Сумма ожидающих инвойсов: ${round(all_awaiting_usdts, 2)}\n\n"
-    text += f"Всего доступно на вывод: ${round(all_accepted_balance)}\n\n"
-
-    shops = await sync_to_async(Shop.objects.all)()
-    shop_balance = 0
-    for shop in shops:
-        shop_bal = await shop_balances(shop)
-        shop_balance += shop_bal
-    text += f"Всего на балансе у шопов ${round(shop_balance, 2)}\n\n"
+    # changers = await sync_to_async(TGUser.objects.filter)(is_changer=True)
+    # all_amount_in_card = 0
+    # all_awaiting_usdts = 0
+    # all_accepted_balance = 0
+    # for changer in changers:
+    #     in_cards, ref_balance, awaiting_invoices, total_ready_to_send = await changers_currents_balance(changer)
+    #     all_awaiting_usdts += in_cards
+    #     all_awaiting_usdts += awaiting_invoices
+    #     all_accepted_balance += total_ready_to_send
+    #
+    # text = f"Сумма на счета у операторов: ${round(all_amount_in_card, 2)}\n"
+    # text += f"Сумма ожидающих инвойсов: ${round(all_awaiting_usdts, 2)}\n\n"
+    # text += f"Всего доступно на вывод: ${round(all_accepted_balance)}\n\n"
+    #
+    # shops = await sync_to_async(Shop.objects.all)()
+    # shop_balance = 0
+    # for shop in shops:
+    #     shop_bal = await shop_balances(shop)
+    #     shop_balance += shop_bal
+    # text += f"Всего на балансе у шопов ${round(shop_balance, 2)}\n\n"
     shef_balance = await sheff_balance()
-    text += f"Мэйн баланс: {round(shef_balance, 2)}\n"
+    text = f"Баланс: {round(shef_balance, 2)}\n"
     await msg.answer(text)
 
 @router.message(Command("sendchanger"))
