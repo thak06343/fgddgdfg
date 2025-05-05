@@ -950,7 +950,7 @@ async def zp(msg: Message):
     #     shop_bal = await shop_balances(shop)
     #     shop_balance += shop_bal
     # text += f"Всего на балансе у шопов ${round(shop_balance, 2)}\n\n"
-    shef_balance = await sheff_balance()
+    shef_balance, invs = await sheff_balance()
     text = f"Баланс: {round(shef_balance, 2)}\n"
     await msg.answer(text)
 
