@@ -100,8 +100,8 @@ async def accept_fiat(msg: Message, state: FSMContext, bot: Bot):
             usdt_for_changer = fiat / country.fiat_to_usdt
             usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
         else:
-            kzt = None
             fiat = amount
+            kzt = fiat / country.kzt_to_fiat
             usdt_for_changer = fiat / country.fiat_to_usdt
             usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
         if kzt:
