@@ -628,8 +628,11 @@ async def sheff_balance():
         if inv.req:
             changer_prc = inv.req.user.prc
             avialable_prc = shop_prc - changer_prc - 1
-            summa = inv.amount_in_usdt_for_changer / 100 * avialable_prc
-            a += summa
+            if inv.amount_in_usdt_for_changer:
+                summa = inv.amount_in_usdt_for_changer / 100 * avialable_prc
+                a += summa
+            else:
+                print("OWIBKA", inv.id)
         else:
             print("OWIBKA", inv.id)
     return a
