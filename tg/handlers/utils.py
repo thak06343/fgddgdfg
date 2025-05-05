@@ -616,19 +616,22 @@ async def operator_invoices(operator):
     return usdt_balance, invoice_list
 
 async def sheff_balance():
-    usdt_balance, invoice_list = await sync_to_async(lambda: (
-        Invoice.objects.filter(accepted=True, sent_sheff=False)
-        .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
-        list(Invoice.objects.filter(accepted=True, sent_sheff=False))
-    ))()
+    # usdt_balance, invoice_list = await sync_to_async(lambda: (
+    #     Invoice.objects.filter(accepted=True, sent_sheff=False)
+    #     .aggregate(total=Coalesce(Sum('amount_in_usdt'), 0.0, output_field=FloatField()))['total'],
+    #     list(Invoice.objects.filter(accepted=True, sent_sheff=False))
+    # ))()
     invoices = await sync_to_async(Invoice.objects.filter)(accepted=True, sent_sheff=False)
     a = 0
     for inv in invoices:
         shop_prc = inv.shop.prc
-        changer_prc = inv.req.user.prc
-        avialable_prc = shop_prc - changer_prc - 1
-        summa = inv.amount_in_usdt_for_changer / 100 * avialable_prc
-        a += summa
+        if inv.req:
+            changer_prc = inv.req.user.prc
+            avialable_prc = shop_prc - changer_prc - 1
+            summa = inv.amount_in_usdt_for_changer / 100 * avialable_prc
+            a += summa
+        else:
+            print("OWIBKA", inv.id)
     return a
 
 async def shop_balances(shop):
