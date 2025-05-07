@@ -21,8 +21,8 @@ order_operator_text = (
     "♻️ *#Заявка*\n\n"
     "💠 Ссылка: {user_link}\n"
     "👤 Клиент: {full_name}\n"
-    "💵 Сумма: `{amount} KZT`\n"
-    "📅 Дата: `{date}`\n\n"
+    "💵 Сумма: {amount} KZT\n"
+    "📅 Дата: {date}\n\n"
     "STATUS: {status}"
     "🔗 Для связи нажмите на имя клиента."
 )
@@ -35,6 +35,7 @@ admin_invoice_text = (
     "💵 Сумма: `{amount} KZT`\n"
     "💵 Сумма: `{amount_kgs} KGS`\n"
     "💵 Сумма: `{amount_usdt} USDT`\n"
+    "\n{cart}"
 )
 
 changer_invoice_text = (

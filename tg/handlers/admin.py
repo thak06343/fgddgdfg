@@ -148,7 +148,7 @@ async def fiat_to_usdt_for_shop(call: CallbackQuery, state: FSMContext):
     await state.update_data(country_id=country.id)
     await call.message.answer(f"Введите значение для {country.country.upper()} - USDT(SHOP):\n\nТекущее значение = {country.fiat_to_usdt_for_shop}")
 
-@router.message(ChangeCountryCoursesState.awaiting_fiat_to_usdt)
+@router.message(ChangeCountryCoursesState.awaiting_fiat_to_usdt_for_shop)
 async def awaiting_kzt_to_fiat(msg: Message, state: FSMContext):
     try:
         new_course = float(msg.text)
@@ -664,7 +664,8 @@ async def admin_invoice(call: CallbackQuery):
                                      shop=invoice.shop.name.upper(), amount=round(invoice.amount_in_kzt, 2) if invoice.amount_in_kzt else 'уточняется',
                                      date=invoice.date_used.strftime('%d.%m.%Y %H:%M'),
                                      amount_kgs=round(invoice.amount_in_fiat, 2) if invoice.amount_in_fiat else 'уточняется',
-                                     amount_usdt=round(invoice.amount_in_usdt_for_changer, 2) if invoice.amount_in_usdt_for_changer else 'уточняется')
+                                     amount_usdt=round(invoice.amount_in_usdt_for_changer, 2) if invoice.amount_in_usdt_for_changer
+                                     else 'уточняется', cart=invoice.req.cart if invoice.req.cart else 'уточняется')
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text=f"Принять от имени {invoice.req.user.username if invoice.req.user.username else invoice.req.user.first_name}",
                                      callback_data=f"admin_accept_invoice_{invoice.id}"))

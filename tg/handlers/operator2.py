@@ -135,6 +135,8 @@ async def shop_operator_invoice(call: CallbackQuery):
             await call.message.edit_text(text, reply_markup=builder.as_markup())
         except Exception as e:
             print(e)
+    else:
+        await call.answer("Нет данных о платеже.")
 
 class OperatorModeState(StatesGroup):
     awaiting_amount = State()

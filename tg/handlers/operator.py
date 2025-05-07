@@ -779,7 +779,6 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
         if not invoice.accepted:
             if invoice.req.country.country != "uzs":
                 invoice.amount_in_fiat = int(msg.text)
-                invoice.amount_in_kzt = int(msg.text) * invoice.req.country.kzt_to_fiat
                 invoice.amount_in_usdt_for_changer = int(msg.text) / invoice.req.country.fiat_to_usdt
                 invoice.amount_in_usdt = int(msg.text) / invoice.req.country.fiat_to_usdt_for_shop
             else:
