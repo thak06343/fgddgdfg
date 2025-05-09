@@ -96,8 +96,8 @@ async def choose_category(call: CallbackQuery, bot: Bot):
         return
     else:
         course = await sync_to_async(Course.objects.first)()
-        amount = amount / course.kzt_usd
-        req = await find_category_req(amount, category)
+        amount_usdt = amount / course.kzt_usd
+        req = await find_category_req(amount_usdt, category)
         if req:
             country = await sync_to_async(Country.objects.get)(id=req.country.id)
             shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=chat.operator, active=True)
