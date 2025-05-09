@@ -78,7 +78,7 @@ async def kzt_answer(msg: Message, bot: Bot):
         if active_reqs.filter(terminal=True).exists():
             builder.add(InlineKeyboardButton(text="🏧 Terminal", callback_data=f"choose_category_{amount}_terminal"))
         builder.adjust(2)
-        text = f"💵 Сумма: `{amount}`\n\n_Как будете оплачивать?_"
+        text = f"💵 Сумма: `{amount}` ₸\n_Выберите способ оплаты?_"
         await msg.answer(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
 
 @router.callback_query(F.data.startswith("choose_category_"))
@@ -109,7 +109,7 @@ async def choose_category(call: CallbackQuery, bot: Bot):
                     shop_operator=shop_operator)
                 text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart,
                                        info=req.info if req.info else '!')
-                await call.message.answer(text, parse_mode="Markdown")
+                await call.message.edit_text(text, parse_mode="Markdown")
                 asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
             elif country.country == "uzs":
                 fiat = amount * country.kzt_to_fiat
@@ -120,7 +120,7 @@ async def choose_category(call: CallbackQuery, bot: Bot):
                     amount_in_usdt_for_changer=usdt_for_changer)
                 text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart,
                                        info=req.info if req.info else '!')
-                await call.message.answer(text, parse_mode="Markdown")
+                await call.message.edit_text(text, parse_mode="Markdown")
                 asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
         else:
             await call.answer("Реквизит уже занят, выберите другую категорию.", show_alert=True)
