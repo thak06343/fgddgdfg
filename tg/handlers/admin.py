@@ -847,6 +847,13 @@ async def admin_send_invoice(call: CallbackQuery, bot: Bot):
     builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
     builder.adjust(1)
     try:
+        await bot.send_photo(chat_id=data[4], photo=usage.photo, reply_markup=builder.as_markup())
+        await call.answer("Отправлено!", show_alert=True)
+        return
+    except Exception as e:
+        await bot.send_document(chat_id=str(data[4]), document=usage.photo,
+                                reply_markup=builder.as_markup())
+    try:
         await bot.copy_message(chat_id=data[4], from_chat_id=data[5], message_id=int(data[6]), reply_markup=builder.as_markup())
     except Exception as e:
         await bot.send_document(chat_id=str(data[4]), document=usage.photo,
@@ -971,3 +978,12 @@ async def send_announce_to_changers(msg: Message, bot: Bot):
         except Exception as e:
             print(e)
     await msg.answer(f"Отправлено {count} операторам!")
+
+@router.message(Command("send"))
+async def text_sender(msg: Message):
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="Отправить владельцам", callback_data="text_send_boss"))
+    builder.add(InlineKeyboardButton(text="Отправить операторам", callback_data="text_send_operators"))
+    builder.add(InlineKeyboardButton(text="Отправить обменникам", callback_data="text_send_changers"))
+    await msg.answer("Кому отправить сообщение?", reply_markup=builder.as_markup())
+

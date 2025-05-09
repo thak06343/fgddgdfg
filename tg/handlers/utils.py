@@ -93,6 +93,10 @@ async def pay_checker(invoice, msg, bot, chat):
         try:
             invoice = await sync_to_async(Invoice.objects.get)(id=invoice.id)
             req_usage = await sync_to_async(ReqUsage.objects.get)(id=new_req_usage.id)
+            if not req_usage.active:
+                req_usage.status = "deactivated"
+                req_usage.save()
+                break
             if invoice.status == "deleted":
                 req_usage.status = "deleted"
                 req_usage.active = False
@@ -117,7 +121,7 @@ async def pay_checker(invoice, msg, bot, chat):
             if secs >= 5000:
                 break
             if invoice.accepted:
-                await msg.answer("✅")
+                await msg.answer("✅ _Платеж поступил_", parse_mode="Markdown")
                 req_usage.status = "finish"
                 req_usage.active = False
                 await sync_to_async(req_usage.save)()
