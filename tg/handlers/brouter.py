@@ -96,6 +96,7 @@ async def choose_category(call: CallbackQuery, bot: Bot):
         return
     else:
         req = await find_category_req(amount, category)
+        print("CHOOSE CAT REQ", req)
         if req:
             country = await sync_to_async(Country.objects.get)(id=req.country.id)
             shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=chat.operator, active=True)
