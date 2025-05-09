@@ -95,8 +95,9 @@ async def choose_category(call: CallbackQuery, bot: Bot):
         await call.answer("Завершите активную заявку.", show_alert=True)
         return
     else:
+        course = await sync_to_async(Course.objects.first)()
+        amount = amount / course.kzt_usd
         req = await find_category_req(amount, category)
-        print("CHOOSE CAT REQ", req)
         if req:
             country = await sync_to_async(Country.objects.get)(id=req.country.id)
             shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=chat.operator, active=True)
