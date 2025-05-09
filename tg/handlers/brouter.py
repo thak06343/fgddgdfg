@@ -26,12 +26,9 @@ class IsKZT(BaseFilter):
                     await sync_to_async(chat.save)()
                     amount = int(msg.text[:-1])
                     last_usage = await sync_to_async(
-                        lambda: ReqUsage.objects.filter(chat=chat).order_by('-date_used').first())()
+                        lambda: ReqUsage.objects.filter(chat=chat, active=True).order_by('-date_used').first())()
                     if last_usage:
-                        if timezone.now() - last_usage.date_used > timedelta(minutes=10):
-                            return True
-                        else:
-                            return False
+                        return False
                     else:
                         return True
                 else:

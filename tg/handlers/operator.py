@@ -525,12 +525,13 @@ async def manage_categories_req(call: CallbackQuery):
     data = call.data.split("_")
     req = await sync_to_async(Req.objects.get)(id=data[3])
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.kaspi else '⚫️'} Kaspi", callback_data=f"change_category_kaspi_{req.id}"))
-    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.bez_kaspi else '⚫️'} БезKaspi",
+    builder.add(InlineKeyboardButton(text=f"💳 Kaspi {'🟢' if req.kaspi else '⚫️'} ",
+                                     callback_data=f"change_category_kaspi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"🛒 БезKaspi {'🟢' if req.bez_kaspi else '⚫️'} ",
                                      callback_data=f"change_category_bezkaspi_{req.id}"))
-    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.qiwi else '⚫️'} Qiwi",
+    builder.add(InlineKeyboardButton(text=f"🐤 Qiwi {'🟢' if req.qiwi else '⚫️'} ",
                                      callback_data=f"change_category_qiwi_{req.id}"))
-    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.terminal else '⚫️'} Terminal",
+    builder.add(InlineKeyboardButton(text=f"🏧 Terminal {'🟢' if req.terminal else '⚫️'} ",
                                      callback_data=f"change_category_terminal_{req.id}"))
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"manage_req_{req.id}"))
