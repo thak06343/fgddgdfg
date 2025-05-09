@@ -82,47 +82,88 @@ async def kzt_answer(msg: Message, bot: Bot):
     builder.adjust(2)
     await msg.answer("Выберите категорию реквизита:", reply_markup=builder.as_markup())
 
-
-@router.callback_query()
-async def business_callbacks(call: CallbackQuery, bot: Bot):
-    if call.data.startswith("choose_category_"):
-        data = call.data.split("_")
-        chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=call.chat.id)
-        amount = int(data[2])
-        category = data[3]
-        last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
-        if last_usage:
-            await call.answer("Завершите активную заявку.", show_alert=True)
-            return
+@router.callback_query(F.data.startswith("choose_category_"))
+async def choose_category(call: CallbackQuery, bot: Bot):
+    data = call.data.split("_")
+    chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=call.chat.id)
+    amount = int(data[2])
+    category = data[3]
+    last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
+    if last_usage:
+        await call.answer("Завершите активную заявку.", show_alert=True)
+        return
+    else:
+        req = await find_category_req(amount, category)
+        if req:
+            country = await sync_to_async(Country.objects.get)(id=req.country.id)
+            shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=chat.operator, active=True)
+            shop_operator = shop_operator.first()
+            if country.country != "uzs":
+                fiat = amount / country.kzt_to_fiat
+                usdt_for_changer = fiat / country.fiat_to_usdt
+                usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+                new_invoice = await sync_to_async(Invoice.objects.create)(
+                    req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
+                    amount_in_usdt_for_changer=usdt_for_changer, shop=shop_operator.shop,
+                    shop_operator=shop_operator)
+                text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart,
+                                       info=req.info if req.info else '!')
+                await call.message.answer(text, parse_mode="Markdown")
+                asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
+            elif country.country == "uzs":
+                fiat = amount * country.kzt_to_fiat
+                usdt_for_changer = fiat / country.fiat_to_usdt
+                usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+                new_invoice = await sync_to_async(Invoice.objects.create)(
+                    req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
+                    amount_in_usdt_for_changer=usdt_for_changer)
+                text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart,
+                                       info=req.info if req.info else '!')
+                await call.message.answer(text, parse_mode="Markdown")
+                asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
         else:
-            req = await find_category_req(amount, category)
-            if req:
-                country = await sync_to_async(Country.objects.get)(id=req.country.id)
-                shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=chat.operator, active=True)
-                shop_operator = shop_operator.first()
-                if country.country != "uzs":
-                    fiat = amount / country.kzt_to_fiat
-                    usdt_for_changer = fiat / country.fiat_to_usdt
-                    usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
-                    new_invoice = await sync_to_async(Invoice.objects.create)(
-                        req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
-                        amount_in_usdt_for_changer=usdt_for_changer, shop=shop_operator.shop,
-                        shop_operator=shop_operator)
-                    text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart, info=req.info if req.info else '!')
-                    await call.message.answer(text, parse_mode="Markdown")
-                    asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
-                elif country.country == "uzs":
-                    fiat = amount * country.kzt_to_fiat
-                    usdt_for_changer = fiat / country.fiat_to_usdt
-                    usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
-                    new_invoice = await sync_to_async(Invoice.objects.create)(
-                        req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
-                        amount_in_usdt_for_changer=usdt_for_changer)
-                    text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart, info=req.info if req.info else '!')
-                    await call.message.answer(text, parse_mode="Markdown")
-                    asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
-            else:
-                await call.answer("Реквизит уже занят, выберите другую категорию.", show_alert=True)
+            await call.answer("Реквизит уже занят, выберите другую категорию.", show_alert=True)
+
+# @router.callback_query()
+# async def business_callbacks(call: CallbackQuery, bot: Bot):
+#     if call.data.startswith("choose_category_"):
+#         data = call.data.split("_")
+#         chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=call.chat.id)
+#         amount = int(data[2])
+#         category = data[3]
+#         last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
+#         if last_usage:
+#             await call.answer("Завершите активную заявку.", show_alert=True)
+#             return
+#         else:
+#             req = await find_category_req(amount, category)
+#             if req:
+#                 country = await sync_to_async(Country.objects.get)(id=req.country.id)
+#                 shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=chat.operator, active=True)
+#                 shop_operator = shop_operator.first()
+#                 if country.country != "uzs":
+#                     fiat = amount / country.kzt_to_fiat
+#                     usdt_for_changer = fiat / country.fiat_to_usdt
+#                     usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+#                     new_invoice = await sync_to_async(Invoice.objects.create)(
+#                         req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
+#                         amount_in_usdt_for_changer=usdt_for_changer, shop=shop_operator.shop,
+#                         shop_operator=shop_operator)
+#                     text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart, info=req.info if req.info else '!')
+#                     await call.message.answer(text, parse_mode="Markdown")
+#                     asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
+#                 elif country.country == "uzs":
+#                     fiat = amount * country.kzt_to_fiat
+#                     usdt_for_changer = fiat / country.fiat_to_usdt
+#                     usdt_for_shop = fiat / country.fiat_to_usdt_for_shop
+#                     new_invoice = await sync_to_async(Invoice.objects.create)(
+#                         req=req, amount_in_kzt=amount, amount_in_usdt=usdt_for_shop, amount_in_fiat=fiat,
+#                         amount_in_usdt_for_changer=usdt_for_changer)
+#                     text = req_text.format(name=new_invoice.req.name, cart=new_invoice.req.cart, info=req.info if req.info else '!')
+#                     await call.message.answer(text, parse_mode="Markdown")
+#                     asyncio.create_task(pay_checker(new_invoice, call.message, bot, chat))
+#             else:
+#                 await call.answer("Реквизит уже занят, выберите другую категорию.", show_alert=True)
 
 
 #
