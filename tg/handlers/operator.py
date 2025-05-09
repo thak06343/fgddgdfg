@@ -580,9 +580,9 @@ async def changer_restore_req(call: CallbackQuery, state: FSMContext):
     builder.add(InlineKeyboardButton(text="Добавить описание", callback_data=f"add_description_to_req_{req.id}"))
     builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'}", callback_data=f"activate_req_{req.id}"))
     if not req.archived:
-        text += "\n\n❌ Удален"
         builder.add(InlineKeyboardButton(text="❌ Удалить", callback_data=f"changer_archive_req_{req.id}"))
     if req.archived:
+        text += "\n\n❌ Удален"
         builder.add(InlineKeyboardButton(text="🟢 Восстановить", callback_data=f"changer_restore_req_{req.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
     builder.adjust(1)
@@ -665,6 +665,7 @@ async def activate_req_edit(call: CallbackQuery):
         last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
         builder.add(InlineKeyboardButton(text=f"{'🟢' if req.active else '⚫️'} {short_name} *{last_digits}",
                                          callback_data=f"activate_req_{req.id}"))
+    builder.adjust(2)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_settings"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 

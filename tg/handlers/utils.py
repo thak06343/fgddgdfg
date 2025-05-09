@@ -697,11 +697,14 @@ async def find_category_req(amount_usd, category):
         "qiwi": "qiwi",
         "terminal": "terminal"
     }
+    print("IN FIND CAT")
     field = field_map.get(category)
+    print(field, "AFTER FIELD")
     if not field:
         return None
-
+    print("AFTER IF NOT")
     last_24h = timezone.now() - timedelta(hours=24)
+    print("LAST 24g", last_24h)
     valid_reqs = await sync_to_async(lambda: Req.objects.filter(
         active=True, archived=False, **{field: True}
     ).annotate(
@@ -710,7 +713,7 @@ async def find_category_req(amount_usd, category):
             requsage__usage_inv__accepted=True
         ))
     ).order_by('usage_count'))()
-
+    print("VALID", valid_reqs)
     for req in valid_reqs:
         total_amount_val, awaiting_usdt = await balance_val(req.user)
         limit = req.user.limit - awaiting_usdt
