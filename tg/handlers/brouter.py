@@ -80,6 +80,8 @@ async def kzt_answer(msg: Message, bot: Bot):
         builder.adjust(2)
         text = f"💵 Сумма: `{amount}` ₸\n_Выберите способ оплаты?_"
         await msg.answer(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
+    else:
+        await msg.answer("no req")
 
 @router.callback_query(F.data.startswith("choose_category_"))
 async def choose_category(call: CallbackQuery, bot: Bot):
