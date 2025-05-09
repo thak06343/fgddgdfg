@@ -682,6 +682,8 @@ async def admin_invoice(call: CallbackQuery):
         if req_usage.photo:
             builder.add(InlineKeyboardButton(text="Фото Чека", callback_data=f"admin_show_photo_{req_usage.id}"))
         builder.add(InlineKeyboardButton(text="Деактивация", callback_data=f"admin_deactivate_usage_{req_usage.id}"))
+        builder.add(InlineKeyboardButton(text="Перевести",
+                                         callback_data=f"adminchange_operator_{invoice.id}_{req_usage.id}_{call.message.chat.id}_{call.message.message_id}"))
     builder.adjust(1)
     builder.row(InlineKeyboardButton(text=f"✍️ Изменить сумму {invoice.req.country.country}", callback_data=f"admin_change_invoice_fiat_{invoice.id}"))
     builder.row(InlineKeyboardButton(text=f"< Назад", callback_data="back_to_invoices"))

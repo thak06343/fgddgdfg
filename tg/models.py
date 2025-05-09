@@ -69,6 +69,10 @@ class Req(models.Model):
     country = models.ForeignKey("Country", on_delete=models.SET_NULL, null=True, blank=True)
     info = models.TextField(null=True, blank=True)
     bank = models.ForeignKey(Bank, on_delete=models.SET_NULL, null=True, blank=True)
+    bez_kaspi = models.BooleanField(default=True)
+    kaspi = models.BooleanField(default=True)
+    qiwi = models.BooleanField(default=True)
+    terminal = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.user} {self.name} {self.cart} {self.country}"
@@ -178,3 +182,8 @@ class OneTimeReq(models.Model):
     active = models.BooleanField(default=True)
     gte = models.IntegerField()
     lte = models.IntegerField()
+
+class Group(models.Model):
+    title = models.CharField(max_length=255)
+    req_group = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True)
+    active = models.BooleanField(default=True)

@@ -689,3 +689,33 @@ async def choose_ltc_account(account1, account2):
         balance2 = await get_balance(account2)
 
         return account2 if balance2 < balance1 * 0.06 else account1
+
+async def find_category_req(amount_usd, category):
+    field_map = {
+        "kaspi": "kaspi",
+        "bezkaspi": "bez_kaspi",
+        "qiwi": "qiwi",
+        "terminal": "terminal"
+    }
+    field = field_map.get(category)
+    if not field:
+        return None
+
+    last_24h = timezone.now() - timedelta(hours=24)
+    valid_reqs = await sync_to_async(lambda: Req.objects.filter(
+        active=True, archived=False, **{field: True}
+    ).annotate(
+        usage_count=Count('requsage', filter=Q(
+            requsage__date_used__gte=last_24h,
+            requsage__usage_inv__accepted=True
+        ))
+    ).order_by('usage_count'))()
+
+    for req in valid_reqs:
+        total_amount_val, awaiting_usdt = await balance_val(req.user)
+        limit = req.user.limit - awaiting_usdt
+        usage_balance = limit - total_amount_val
+        if usage_balance >= amount_usd:
+            total_amount_today = await check_daily_limit(req)
+            if (req.limit - total_amount_today) >= amount_usd:
+                return req

@@ -514,10 +514,55 @@ async def manage_req(call: CallbackQuery, state: FSMContext):
         builder.add(InlineKeyboardButton(text="❌ Удалить", callback_data=f"changer_archive_req_{req.id}"))
     if req.archived:
         builder.add(InlineKeyboardButton(text="🟢 Восстановить", callback_data=f"changer_restore_req_{req.id}"))
+    builder.add(InlineKeyboardButton(text="Котегории", callback_data=f"manage_categories_req_{req.id}"))
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="manage_reqs"))
     builder.adjust(1)
     await call.message.edit_text(text=text, parse_mode="Markdown", reply_markup=builder.as_markup())
     await state.clear()
+
+@router.callback_query(F.data.startswith("manage_categories_req_"))
+async def manage_categories_req(call: CallbackQuery):
+    data = call.data.split("_")
+    req = await sync_to_async(Req.objects.get)(id=data[3])
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.kaspi else '⚫️'} Kaspi", callback_data=f"change_category_kaspi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.bez_kaspi else '⚫️'} БезKaspi",
+                                     callback_data=f"change_category_bezkaspi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.qiwi else '⚫️'} Qiwi",
+                                     callback_data=f"change_category_qiwi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"{'🟢' if req.terminal else '⚫️'} Terminal",
+                                     callback_data=f"change_category_terminal_{req.id}"))
+    builder.adjust(1)
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"manage_req_{req.id}"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("change_category_"))
+async def change_category(call: CallbackQuery):
+    data = call.data.split("_")
+    req = await sync_to_async(Req.objects.get)(id=data[3])
+    category = data[2]
+    if category in ["kaspi", "bezkaspi", "qiwi", "terminal"]:
+        field_name = category if category != "bezkaspi" else "bez_kaspi"
+        current_value = getattr(req, field_name)
+        setattr(req, field_name, not current_value)
+        await sync_to_async(req.save)()
+    else:
+        await call.answer("Неизвестная категория", show_alert=True)
+        return
+
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text=f"💳 Kaspi {'🟢' if req.kaspi else '⚫️'} ",
+                                     callback_data=f"change_category_kaspi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"🛒 БезKaspi {'🟢' if req.bez_kaspi else '⚫️'} ",
+                                     callback_data=f"change_category_bezkaspi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"🐤 Qiwi {'🟢' if req.qiwi else '⚫️'} ",
+                                     callback_data=f"change_category_qiwi_{req.id}"))
+    builder.add(InlineKeyboardButton(text=f"🏧 Terminal {'🟢' if req.terminal else '⚫️'} ",
+                                     callback_data=f"change_category_terminal_{req.id}"))
+    builder.adjust(1)
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"manage_req_{req.id}"))
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+
 
 @router.callback_query(F.data.startswith("changer_restore_req_"))
 async def changer_restore_req(call: CallbackQuery, state: FSMContext):
@@ -726,6 +771,7 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
         invoice_id = data.get("invoice_id")
         invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
         if not invoice.accepted:
+
             reaction = ReactionTypeEmoji(emoji="👍")
             try:
                 await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],
@@ -746,6 +792,9 @@ async def awaiting_amount_invoice(msg: Message, state: FSMContext, bot: Bot):
             invoice.amount_in_usdt = usdt_for_shop
             invoice.amount_in_usdt_for_changer = usdt_for_changer
             invoice.save()
+        else:
+            await msg.answer("Инвойс уже принят.")
+
         await state.clear()
     except Exception as e:
         print(e)
