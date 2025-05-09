@@ -85,7 +85,7 @@ async def kzt_answer(msg: Message, bot: Bot):
 @router.callback_query(F.data.startswith("choose_category_"))
 async def choose_category(call: CallbackQuery, bot: Bot):
     data = call.data.split("_")
-    chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=call.chat.id)
+    chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=call.message.chat.id)
     amount = int(data[2])
     category = data[3]
     last_usage = await sync_to_async(ReqUsage.objects.filter)(active=True, chat=chat)
