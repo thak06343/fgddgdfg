@@ -70,17 +70,19 @@ async def kzt_answer(msg: Message, bot: Bot):
     amount = int(msg.text[:-1])
     chat = await sync_to_async(OperatorClientChat.objects.get)(chat_id=msg.chat.id)
     active_reqs = await sync_to_async(lambda: Req.objects.filter(active=True, archived=False))()
-    builder = InlineKeyboardBuilder()
-    if active_reqs.filter(kaspi=True).exists():
-        builder.add(InlineKeyboardButton(text="💳 Kaspi", callback_data=f"choose_category_{amount}_kaspi"))
-    if active_reqs.filter(bez_kaspi=True).exists():
-        builder.add(InlineKeyboardButton(text="🛒 БезKaspi", callback_data=f"choose_category_{amount}_bezkaspi"))
-    if active_reqs.filter(qiwi=True).exists():
-        builder.add(InlineKeyboardButton(text="🐤 Qiwi", callback_data=f"choose_category_{amount}_qiwi"))
-    if active_reqs.filter(terminal=True).exists():
-        builder.add(InlineKeyboardButton(text="🏧 Terminal", callback_data=f"choose_category_{amount}_terminal"))
-    builder.adjust(2)
-    await msg.answer("Выберите категорию реквизита:", reply_markup=builder.as_markup())
+    if active_reqs:
+        builder = InlineKeyboardBuilder()
+        if active_reqs.filter(kaspi=True).exists():
+            builder.add(InlineKeyboardButton(text="💳 Kaspi", callback_data=f"choose_category_{amount}_kaspi"))
+        if active_reqs.filter(bez_kaspi=True).exists():
+            builder.add(InlineKeyboardButton(text="🛒 БезKaspi", callback_data=f"choose_category_{amount}_bezkaspi"))
+        if active_reqs.filter(qiwi=True).exists():
+            builder.add(InlineKeyboardButton(text="🐤 Qiwi", callback_data=f"choose_category_{amount}_qiwi"))
+        if active_reqs.filter(terminal=True).exists():
+            builder.add(InlineKeyboardButton(text="🏧 Terminal", callback_data=f"choose_category_{amount}_terminal"))
+        builder.adjust(2)
+        text = f"💵 Сумма: `{amount}`\n\n_Как будете оплачивать?_"
+        await msg.answer(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
 
 @router.callback_query(F.data.startswith("choose_category_"))
 async def choose_category(call: CallbackQuery, bot: Bot):
