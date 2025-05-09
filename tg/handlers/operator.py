@@ -474,6 +474,7 @@ def count_user_reqs(user_id):
 
 @router.callback_query(F.data.startswith("manage_reqs"))
 async def manage_reqs(call: CallbackQuery):
+    print("IN MANAGE REQS")
     data = call.data.split("_")
     page = int(data[2]) if len(data) > 2 else 1
     per_page = 30
