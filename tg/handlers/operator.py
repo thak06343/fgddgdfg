@@ -738,18 +738,18 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
 class ChangeFiatState(StatesGroup):
     awaiting_amount = State()
 
-# @router.callback_query(F.data.startswith("accept_and_change_fiat_"))
-# async def accept_and_change_fiat(call: CallbackQuery, state: FSMContext):
-#     data = call.data.split("_")
-#     invoice = await sync_to_async(Invoice.objects.get)(id=data[4])
-#     if not invoice.accepted:
-#         await state.set_state(ChangeFiatState.awaiting_amount)
-#         await state.update_data(invoice_id=data[4])
-#         builder = InlineKeyboardBuilder()
-#         builder.add(InlineKeyboardButton(text="< Отмена", callback_data=f"changer_back_to_accepts_{data[4]}"))
-#         await call.message.edit_reply_markup(reply_markup=builder.as_markup())
-#     else:
-#         await call.answer("Инвойс уже принят")
+@router.callback_query(F.data.startswith("accept_and_change_fiat_"))
+async def accept_and_change_fiat(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    invoice = await sync_to_async(Invoice.objects.get)(id=data[4])
+    if not invoice.accepted:
+        await state.set_state(ChangeFiatState.awaiting_amount)
+        await state.update_data(invoice_id=data[4])
+        builder = InlineKeyboardBuilder()
+        builder.add(InlineKeyboardButton(text="< Отмена", callback_data=f"changer_back_to_accepts_{data[4]}"))
+        await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    else:
+        await call.answer("Инвойс уже принят")
 
 @router.callback_query(F.data.startswith("changer_back_to_accepts_"))
 async def changer_back_to_accepts(call: CallbackQuery, state: FSMContext):
@@ -854,6 +854,8 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
             usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
             usage.active = False
             usage.save()
+        else:
+            await msg.answer("Инвойс уже принят!")
         await state.clear()
 
     except Exception as e:

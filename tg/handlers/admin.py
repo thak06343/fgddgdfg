@@ -301,7 +301,7 @@ async def admin_active_usages(call: CallbackQuery):
                 if usage.photo:
                     active_not += "🖼"
                 builder.add(InlineKeyboardButton(
-                        text=f"{active_not}{usage.date_used.strftime('%d.%m')}|+{usage.usage_inv.amount_in_kzt}KZT",
+                        text=f"{active_not}{usage.date_used.strftime('%d.%m')}|+{usage.usage_inv.amount_in_kzt if usage.usage_inv.amount_in_kzt else 'None'}KZT",
                         callback_data=f"admin_invoice_{usage.usage_inv.id}"))
             builder.adjust(2)
             if page_number > 1:
