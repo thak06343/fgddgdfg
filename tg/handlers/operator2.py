@@ -171,7 +171,7 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("old_mode_"))
 async def old_mode(call: CallbackQuery, state: FSMContext):
     data = call.data.split("_")
-    op_mode = await sync_to_async(OperatorMode.objects.geet)(id=data[2])
+    op_mode = await sync_to_async(OperatorMode.objects.get)(id=data[2])
     req = op_mode.req
     text = f"Отправлять только случайно не отправленные чеки, для работы создайте новый режим.\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
     text2 = (f"{req.name}\n"
