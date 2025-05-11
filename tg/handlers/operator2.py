@@ -206,9 +206,32 @@ async def create_new_mode(call: CallbackQuery, state: FSMContext):
     if req:
         text = f"Реквизиты меняются каждые ${usdt_amount}\n❗️ Не выходите из режима пока не отправите все чеки!\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
         text2 = (f"{req.name}\n"
-                 f"{req.country.flag} {req.cart}")
+                 f"{req.country.flag} {req.cart}\n\n")
+        if req.bez_kaspi:
+            text2 += "Нельзя с Каспи\n"
+        if req.kaspi:
+            text2 += "Можно с каспи\n"
+        if req.qiwi:
+            text2 += "Оплата с киви\n"
+        if req.terminal:
+            text2 += "Оплата с терминала\n"
+        other_reqs = await sync_to_async(Req.objects.filter)(
+            user=req.user, active=True, archived=False
+        )
+        other_reqs = [r for r in other_reqs if r.id != req.id]  # исключаем основной
 
-
+        if other_reqs:
+            text2 += "\n🔁 Дополнительные реквизиты:\n"
+            for r in other_reqs:
+                text2 += f"\n{r.name}\n{r.country.flag} {r.cart}\n"
+                if r.kaspi:
+                    text2 += "Можно с Каспи\n"
+                if r.bez_kaspi:
+                    text2 += "Нельзя с Каспи\n"
+                if r.qiwi:
+                    text2 += "Оплата с киви\n"
+                if r.terminal:
+                    text2 += "Оплата с терминала\n"
         shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
                                                     keyboard=[
                                                         [KeyboardButton(text="Выйти из режима")],
