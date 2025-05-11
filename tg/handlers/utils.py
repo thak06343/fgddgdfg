@@ -121,7 +121,7 @@ async def pay_checker(invoice, msg, bot, chat):
             if secs >= 5000:
                 break
             if invoice.accepted:
-                await msg.answer("✅ _Платеж поступил_", parse_mode="Markdown")
+                await msg.answer(f"✅ _Платеж поступил_ `{invoice.amount_in_fiat}` *{invoice.req.country.country}*", parse_mode="Markdown")
                 req_usage.status = "finish"
                 req_usage.active = False
                 await sync_to_async(req_usage.save)()
@@ -412,7 +412,7 @@ async def check_limit_invoice(wid, invoice_id, bot):
                     if res.status == 200:
                         invoice_data = await res.json()
                         if invoice_data['status'] == 'completed' or invoice_data['status'] == 'overpaid':
-                            pack.user.limit += 50
+                            pack.user.limit += 100
                             pack.user.save()
                             await bot.send_message(chat_id=pack.user.user_id,
                                                        text=f"💸 Лимит увеличен на $50")

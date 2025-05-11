@@ -173,6 +173,7 @@ class OperatorMode(models.Model):
     req = models.ForeignKey(Req, on_delete=models.SET_NULL, null=True, blank=True, related_name="md_reqs")
     max_amount = models.FloatField(null=True, blank=True)
     current_amount = models.FloatField(default=0)
+    shop = models.ForeignKey(Shop, on_delete=models.SET_NULL, null=True, blank=True)
 
 class ApiAccount(models.Model):
     account = models.CharField(max_length=255, null=True, blank=True)

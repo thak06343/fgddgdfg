@@ -73,7 +73,14 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot, state: FSMContext):
             await call.answer("Укажите сколько пришло в вашей валюте", show_alert=True)
             await state.set_state(AcceptFiat.awaiting_amount)
             await state.update_data(invoice_id=invoice_id)
-
+        else:
+            first_req = await sync_to_async(Req.objects.filter)(user=user)
+            req = first_req.first()
+            invoice.req = req
+            invoice.save()
+            await call.answer("Укажите сколько пришло в вашей валюте", show_alert=True)
+            await state.set_state(AcceptFiat.awaiting_amount)
+            await state.update_data(invoice_id=invoice_id)
 
 class AcceptFiat(StatesGroup):
     awaiting_amount = State()

@@ -8,7 +8,7 @@ from django.utils import timezone
 from .utils import PAGE_SIZE, find_req
 from ..kb import shop_operator_panel
 from ..models import TGUser, Invoice, Req, ShopOperator, ReqUsage, Shop, Course, OperatorMode
-from ..text import order_operator_text
+from ..text import order_operator_text, mode_text
 from datetime import  date
 from aiogram.fsm.context import FSMContext
 router = Router()
@@ -144,6 +144,60 @@ class OperatorModeState(StatesGroup):
 
 @router.message(F.text == "🕹 Режим платежей")
 async def shop_operator_mode(msg: Message, state: FSMContext):
+    try:
+        user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
+        shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
+        if shop_operator:
+            shop = shop_operator.shop
+        else:
+            shop = await sync_to_async(Shop.objects.filter)(boss=user)
+    except Exception as e:
+        print(e)
+        shop = None
+    builder = InlineKeyboardBuilder()
+    builder.add(InlineKeyboardButton(text="🔄 Создать новое обращение", callback_data="create_new_mode"))
+    if shop:
+        last_mode_usages = await sync_to_async(OperatorMode.objects.filter)(shop=shop)
+        if last_mode_usages:
+            last_mode_usages = last_mode_usages[:2]
+            for i in last_mode_usages:
+                short_name = i.req.name[:3].upper()
+                builder.add(InlineKeyboardButton(text=f"{short_name} *{i.req.cart[-4:]}", callback_data=f"old_mode_{i.id}"))
+    builder.adjust(1)
+    await msg.answer(mode_text, reply_markup=builder.as_markup())
+
+@router.callback_query(F.data.startswith("old_mode_"))
+async def old_mode(call: CallbackQuery, state: FSMContext):
+    data = call.data.split("_")
+    op_mode = await sync_to_async(OperatorMode.objects.geet)(id=data[2])
+    req = op_mode.req
+    text = f"Отправлять только случайно не отправленные чеки, для работы создайте новый режим.\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
+    text2 = (f"{req.name}\n"
+             f"{req.country.flag} {req.cart}")
+
+    shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
+                                                keyboard=[
+                                                    [KeyboardButton(text="Выйти из режима")],
+                                                ])
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
+    if shop_operator:
+        shop_operator = shop_operator.first()
+        await state.update_data(mode_id=op_mode.id, shop_id=shop_operator.shop.id, req_id=req.id)
+        await state.set_state(OperatorModeState.in_mode)
+        await call.message.answer(text, reply_markup=shop_operator_bottoms)
+        await call.message.answer(text2)
+    else:
+        shop = await sync_to_async(Shop.objects.filter)(boss=user)
+        if shop:
+            shop = shop.first()
+            await state.update_data(mode_id=op_mode.id, shop_id=shop.id, req_id=req.id)
+            await state.set_state(OperatorModeState.in_mode)
+            await call.message.answer(text, reply_markup=shop_operator_bottoms)
+            await call.message.answer(text2)
+
+@router.callback_query(F.data == "create_new_mode")
+async def create_new_mode(call: CallbackQuery, state: FSMContext):
     usdt_amount = 200
     req = await find_req(usdt_amount)
     if not req:
@@ -159,26 +213,26 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
                                                     keyboard=[
                                                         [KeyboardButton(text="Выйти из режима")],
                                                     ])
-        user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
+        user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
         shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
         if shop_operator:
             shop_operator = shop_operator.first()
-            new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
+            new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount, shop=shop_operator.shop)
             await state.update_data(mode_id=new_operator_mode.id, shop_id=shop_operator.shop.id, req_id=req.id)
             await state.set_state(OperatorModeState.in_mode)
-            await msg.answer(text, reply_markup=shop_operator_bottoms)
-            await msg.answer(text2)
+            await call.message.answer(text, reply_markup=shop_operator_bottoms)
+            await call.message.answer(text2)
         else:
             shop = await sync_to_async(Shop.objects.filter)(boss=user)
             if shop:
                 shop = shop.first()
-                new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount)
+                new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount, shop=shop)
                 await state.update_data(mode_id=new_operator_mode.id, shop_id=shop.id, req_id=req.id)
                 await state.set_state(OperatorModeState.in_mode)
-                await msg.answer(text, reply_markup=shop_operator_bottoms)
-                await msg.answer(text2)
+                await call.message.answer(text, reply_markup=shop_operator_bottoms)
+                await call.message.answer(text2)
     else:
-        await msg.answer("no req")
+        await call.message.answer("no req")
 
 
 @router.message(OperatorModeState.in_mode)
