@@ -148,6 +148,7 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
         user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
         shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
         if shop_operator:
+            shop_operator = shop_operator.first()
             shop = shop_operator.shop
         else:
             shop = await sync_to_async(Shop.objects.filter)(boss=user)
