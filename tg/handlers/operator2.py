@@ -152,6 +152,7 @@ async def shop_operator_mode(msg: Message, state: FSMContext):
             shop = shop_operator.shop
         else:
             shop = await sync_to_async(Shop.objects.filter)(boss=user)
+            shop = shop.first()
     except Exception as e:
         print(e)
         shop = None
