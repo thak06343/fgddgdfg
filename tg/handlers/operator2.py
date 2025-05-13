@@ -6,6 +6,7 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ReplyKey
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
+from django.template.defaultfilters import default
 from django.utils import timezone
 from .utils import PAGE_SIZE, find_req, get_req_with_fallback, format_req_info, accept_checker_in_mode
 from ..kb import shop_operator_panel
@@ -138,6 +139,8 @@ async def shop_operator_invoice(call: CallbackQuery):
             builder = InlineKeyboardBuilder()
             if req_usage.active:
                 builder.add(InlineKeyboardButton(text=f"Не получается отправить", callback_data=f"cant_send_{invoice.id}"))
+            if req_usage.photo:
+                builder.add(InlineKeyboardButton(text="Отправить фото", callback_data=f"send_photo_operator_{req_usage.id}"))
             builder.adjust(1)
             builder.row(InlineKeyboardButton(text="< Назад", callback_data="shop_operator_all_invoices"))
             await call.message.edit_text(text, reply_markup=builder.as_markup())
@@ -145,6 +148,15 @@ async def shop_operator_invoice(call: CallbackQuery):
             print(e)
     else:
         await call.answer("Нет данных о платеже.")
+
+@router.callback_query(F.data.startswith("send_photo_operator_"))
+async def send_photo_operator(call: CallbackQuery):
+    data = call.data.split("_")
+    req_usage = await sync_to_async(ReqUsage.objects.get)(id=data[3])
+    try:
+        await call.message.answer_photo(req_usage.photo)
+    except Exception as e:
+        await call.message.answer_document(req_usage.photo)
 
 class OperatorModeState(StatesGroup):
     awaiting_amount = State()
