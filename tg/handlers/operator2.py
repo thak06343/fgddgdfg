@@ -61,7 +61,7 @@ async def shop_operator_all_invoices(call: CallbackQuery):
     data = call.data.split("_")
     page = int(data[4]) if len(data) > 4 else 1
     per_page = 30
-    offset = (page - 1) * per_page
+    offset = (page) * per_page
 
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
