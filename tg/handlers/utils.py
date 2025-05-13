@@ -116,10 +116,11 @@ async def pay_checker(invoice, msg, bot, chat):
                 builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{invoice.id}"))
                 builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
                 try:
-
-                    await bot.send_photo(photo=req_usage.photo, chat_id=req_usage.usage_req.user.user_id)
+                    await bot.send_photo(photo=req_usage.photo, chat_id=req_usage.usage_req.user.user_id, reply_markup=builder.as_markup())
                     napomnil = True
                 except Exception as e:
+                    await bot.send_document(document=req_usage.photo, chat_id=req_usage.usage_req.user.user_id, reply_markup=builder.as_markup())
+                    napomnil = True
                     print(e)
             if secs >= 5000:
                 break
