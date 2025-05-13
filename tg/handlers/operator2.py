@@ -8,6 +8,8 @@ from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
 from django.template.defaultfilters import default
 from django.utils import timezone
+
+from .callback import InvoicePagination
 from .utils import PAGE_SIZE, find_req, get_req_with_fallback, format_req_info, accept_checker_in_mode
 from ..kb import shop_operator_panel
 from ..models import TGUser, Invoice, Req, ShopOperator, ReqUsage, Shop, Course, OperatorMode
@@ -56,12 +58,12 @@ def get_invoices_for_operator(operator, offset, limit):
 def count_invoices_for_operator(operator):
     return Invoice.objects.filter(shop_operator=operator).count()
 
-@router.callback_query(F.data.startswith("shop_operator_all_invoices"))
-async def shop_operator_all_invoices(call: CallbackQuery):
-    data = call.data.split("_")
-    page = int(data[4]) if len(data) > 4 else 1
+
+@router.callback_query(InvoicePagination.filter())
+async def shop_operator_all_invoices(call: CallbackQuery, callback_data: InvoicePagination):
+    page = callback_data.page
     per_page = 30
-    offset = (page) * per_page
+    offset = page * per_page
 
     user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
     shop_operator = await sync_to_async(ShopOperator.objects.get)(operator=user)
@@ -74,6 +76,7 @@ async def shop_operator_all_invoices(call: CallbackQuery):
         return
 
     builder = InlineKeyboardBuilder()
+
     for invoice in invoices:
         req_usage = await sync_to_async(ReqUsage.objects.filter)(usage_inv=invoice)
         active_not = ''
@@ -83,17 +86,18 @@ async def shop_operator_all_invoices(call: CallbackQuery):
                 active_not += "♻️"
             if req_usage.photo:
                 active_not += "🖼"
-        if invoice.accepted:
-            active_not += "✅"
-        else:
-            active_not += "❌"
-        builder.add(InlineKeyboardButton(text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT", callback_data=f"shop_operator_invoice_{invoice.id}"))
+        active_not += "✅" if invoice.accepted else "❌"
+
+        builder.button(text=f"{active_not}{invoice.date_used.strftime('%d.%m')}|+{invoice.amount_in_kzt}KZT",
+                       callback_data=f"shop_operator_invoice_{invoice.id}")
     builder.adjust(2)
-    if page > 1:
-        builder.add(InlineKeyboardButton(text="⬅️",callback_data=f"shop_operator_all_invoices_{page - 1}"))
+    if page > 0:
+        builder.button(text="⬅️", callback_data=InvoicePagination(page=page - 1))
     if offset + per_page < total:
-        builder.add(InlineKeyboardButton(text="➡️",callback_data=f"shop_operator_all_invoices_{page + 1}"))
-    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"back_to_shop_operator_invoices"))
+        builder.button(text="➡️", callback_data=InvoicePagination(page=page + 1))
+
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_shop_operator_invoices"))
+
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 
