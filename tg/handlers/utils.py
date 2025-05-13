@@ -112,16 +112,19 @@ async def pay_checker(invoice, msg, bot, chat):
                 req_usage.save()
                 await msg.answer("Время просрочено, реквизиты не актуальны!")
             if secs >= 1200 and not timeout and req_usage.status == "photo_sent" and not napomnil:
+                builder = InlineKeyboardBuilder()
+                builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{invoice.id}"))
+                builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{invoice.id}"))
                 try:
-                    await bot.send_message(chat_id=req_usage.usage_req.user.user_id, text="Просроченный инвойс",
-                                           reply_to_message_id=msg.message_id)
+
+                    await bot.send_photo(photo=req_usage.photo, chat_id=req_usage.usage_req.user.user_id)
                     napomnil = True
                 except Exception as e:
                     print(e)
             if secs >= 5000:
                 break
             if invoice.accepted:
-                await msg.answer(f"✅ _Платеж поступил_ `{invoice.amount_in_fiat}` *{invoice.req.country.country}*", parse_mode="Markdown")
+                await msg.answer(f"✅")
                 req_usage.status = "finish"
                 req_usage.active = False
                 await sync_to_async(req_usage.save)()
@@ -721,3 +724,37 @@ async def find_category_req(amount_usd, category):
             total_amount_today = await check_daily_limit(req)
             if (req.limit - total_amount_today) >= amount_usd:
                 return req
+
+async def get_req_with_fallback():
+    for amount in (200, 100):
+        req = await find_req(amount)
+        if req:
+            return req, amount
+    return None, None
+
+def format_req_info(req_obj):
+    info = f"{req_obj.name}\n{req_obj.country.flag} {req_obj.cart}\n"
+    if req_obj.kaspi:
+        info += "Можно с Каспи\n"
+    if req_obj.bez_kaspi:
+        info += "Нельзя с Каспи\n"
+    if req_obj.qiwi:
+        info += "Оплата с киви\n"
+    if req_obj.terminal:
+        info += "Оплата с терминала\n"
+    return info
+
+async def accept_checker_in_mode(msg, usage):
+    while True:
+        usage = await sync_to_async(ReqUsage.objects.get)(id=usage.id)
+        if usage.usage_inv.accepted:
+            try:
+                await msg.edit_text(f"+{usage.usage_inv.amount_in_fiat}")
+                usage.active = False
+                usage.save()
+            except Exception as e:
+                print(e)
+            break
+        if not usage.active:
+            break
+        await asyncio.sleep(30)

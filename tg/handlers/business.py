@@ -34,7 +34,7 @@ async def shop_main(msg: Message):
     balance, invoices = await shop_balance(shop)
     text = f"💰 *Баланс:* *${round(balance, 2)}*\n"
     builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text=f"⚡️ 𝑳𝑻𝑪 (%{shop.prc})", callback_data=f"shop_order_to_withdraw"))
+    builder.add(InlineKeyboardButton(text=f"⚡️ 𝑳𝑻𝑪 ({shop.prc}%)", callback_data=f"shop_order_to_withdraw"))
     await msg.answer(text, reply_markup=builder.as_markup(), parse_mode="Markdown")
 
 class WithdrawToShopState(StatesGroup):

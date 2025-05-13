@@ -1,5 +1,6 @@
 import asyncio
 from collections import defaultdict
+from idlelib.pyshell import usage_msg
 from unittest.mock import CallableMixin
 
 import aiohttp
@@ -74,13 +75,17 @@ async def accepting_invoice(call: CallbackQuery, bot: Bot, state: FSMContext):
             await state.set_state(AcceptFiat.awaiting_amount)
             await state.update_data(invoice_id=invoice_id)
         else:
-            first_req = await sync_to_async(Req.objects.filter)(user=user)
-            req = first_req.first()
-            invoice.req = req
-            invoice.save()
-            await call.answer("Укажите сколько пришло в вашей валюте", show_alert=True)
-            await state.set_state(AcceptFiat.awaiting_amount)
-            await state.update_data(invoice_id=invoice_id)
+            reqs = await sync_to_async(Req.objects.filter)(user=user, archived=False)
+            builder = InlineKeyboardBuilder()
+            for req in reqs:
+                short_name = req.name[:3].upper()
+                last_digits = req.cart[-4:] if req.cart and len(req.cart) >= 4 else "****"
+                builder.add(
+                    InlineKeyboardButton(text=f"✅ ({invoice.amount_in_fiat}{invoice.req.country.country}) {short_name} *{last_digits}",
+                                         callback_data=f"sended_invoice_{invoice.id}_{req.id}"))
+            builder.adjust(2)
+            builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{invoice.id}"))
+            await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 class AcceptFiat(StatesGroup):
     awaiting_amount = State()
@@ -121,27 +126,20 @@ async def accept_fiat(msg: Message, state: FSMContext, bot: Bot):
         print(e)
 
 @router.callback_query(F.data.startswith("sended_invoice_"))
-async def sended_invoice(call: CallbackQuery, bot: Bot):
+async def sended_invoice(call: CallbackQuery, bot: Bot, state: FSMContext):
     data = call.data.split("_")
     invoice_id = data[2]
     req_id = data[3]
     invoice = await sync_to_async(Invoice.objects.get)(id=invoice_id)
     req = await sync_to_async(Req.objects.get)(id=req_id)
     invoice.req = req
-    invoice.accepted = True
     invoice.save()
     builder = InlineKeyboardBuilder()
-    country = await sync_to_async(Country.objects.get)(id=invoice.req.country.id)
-    if country:
-        amount_in_fiat = invoice.amount_in_fiat
-        amount_in_usdt = invoice.amount_in_usdt_for_changer
-        builder.add(InlineKeyboardButton(text=f"✅ +{int(amount_in_fiat)} (${round(amount_in_usdt, 2)})"
-                                              f" *{invoice.req.cart[-4:]}", callback_data="none"))
-        await call.message.edit_reply_markup(reply_markup=builder.as_markup())
-        try:
-            await bot.unpin_chat_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
-        except Exception as e:
-            print(e)
+    builder.row(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{invoice.id}"))
+    await call.answer(f"Введите сумму в {invoice.req.country.country}")
+    await state.set_state(AcceptFiat.awaiting_amount)
+    await state.update_data(invoice_id=invoice_id)
+
 
 @router.message(F.text == "📍 Главное")
 async def main_page(msg: Message):
@@ -681,28 +679,12 @@ async def activate_req_edit(call: CallbackQuery):
 async def decline_invoice(call: CallbackQuery, bot: Bot):
     data = call.data.split("_")
     builder = InlineKeyboardBuilder()
-    if len(data) > 4:
-        check_chat_id = data[3]
-        check_message_id = data[4]
-        try:
-            await bot.edit_message_text(chat_id=check_chat_id, message_id=int(check_message_id), text=f"+0")
-        except Exception as e:
-            await call.answer("Принято", show_alert=True)
-        try:
-            invoice = await sync_to_async(Invoice.objects.get)(id=data[2])
-            usage = await sync_to_async(ReqUsage.objects.get)(usage_inv=invoice)
-            usage.active = False
-            usage.save()
-
-        except Exception as e:
-            print(e)
-    else:
-        builder.add(InlineKeyboardButton(text="Фейковый чек", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
-        builder.add(InlineKeyboardButton(text="На фото не чек", callback_data=f"declineinvoice_notreceived_{data[2]}"))
-        builder.add(InlineKeyboardButton(text="Не мой чек", callback_data=f"declineinvoice_notmine_{data[2]}"))
-        builder.add(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{data[2]}"))
-        builder.adjust(1)
-        await call.message.edit_reply_markup(reply_markup=builder.as_markup())
+    builder.add(InlineKeyboardButton(text="Фейковый чек", callback_data=f"declineinvoice_fakecheck_{data[2]}"))
+    builder.add(InlineKeyboardButton(text="На фото не чек", callback_data=f"declineinvoice_notreceived_{data[2]}"))
+    builder.add(InlineKeyboardButton(text="Не мой чек", callback_data=f"declineinvoice_notmine_{data[2]}"))
+    builder.add(InlineKeyboardButton(text="< Назад", callback_data=f"changer_back_to_accepts_{data[2]}"))
+    builder.adjust(1)
+    await call.message.edit_reply_markup(reply_markup=builder.as_markup())
 
 
 
@@ -735,7 +717,7 @@ async def decline_invoice(call: CallbackQuery, bot: Bot):
                                              reply_markup=builder.as_markup(), caption=text)
         except Exception as e:
             check_msg = await bot.send_document(chat_id=admin.user_id, document=last_usage.photo if last_usage.photo else None, reply_markup=builder.as_markup(), caption=text)
-        await call.answer("Информация отправлена", show_alert=True)
+        await call.answer("Информация отправлена")
         builder = InlineKeyboardBuilder()
         builder.add(InlineKeyboardButton(text="✅", callback_data=f"accept_invoice_{invoice.id}"))
         builder.add(InlineKeyboardButton(text=f"Информация отправлена", callback_data="fdsgfdgdfh"))
@@ -763,7 +745,7 @@ async def changer_back_to_accepts(call: CallbackQuery, state: FSMContext):
     builder = InlineKeyboardBuilder()
     data = call.data.split("_")
     invoice = await sync_to_async(Invoice.objects.get)(id=data[4])
-    builder.add(InlineKeyboardButton(text=f"✅ ({invoice.amount_in_kzt}T)",
+    builder.add(InlineKeyboardButton(text=f"✅ ({invoice.amount_in_fiat}{invoice.req.country.country})",
                                      callback_data=f"accept_invoice_{invoice.id}"))
     # builder.add(
     #     InlineKeyboardButton(text=f"✍️ Др сумма", callback_data=f"accept_and_change_fiat_{invoice.id}"))
@@ -848,7 +830,7 @@ async def in_mode_awaiting_amount(msg: Message, state: FSMContext, bot: Bot):
             operator_mode.invoices.add(invoice)
             all_current_invoices = operator_mode.invoices.all()
             balance = await operator_mode_invoice_balances(all_current_invoices)
-            await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+${round(invoice.amount_in_usdt, 2)} (${int(balance)})")
+            await bot.edit_message_text(chat_id=check_chat_id, message_id=check_message_id, text=f"+{invoice.amount_in_fiat} {invoice.req.country.country} (${int(balance)})")
 
             try:
                 await bot.set_message_reaction(chat_id=msg.chat.id, reaction=[reaction],

@@ -1,3 +1,5 @@
+import asyncio
+
 from aiogram import F, Router, Bot
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
@@ -5,7 +7,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter
 from asgiref.sync import sync_to_async
 from django.utils import timezone
-from .utils import PAGE_SIZE, find_req
+from .utils import PAGE_SIZE, find_req, get_req_with_fallback, format_req_info, accept_checker_in_mode
 from ..kb import shop_operator_panel
 from ..models import TGUser, Invoice, Req, ShopOperator, ReqUsage, Shop, Course, OperatorMode
 from ..text import order_operator_text, mode_text
@@ -200,64 +202,60 @@ async def old_mode(call: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "create_new_mode")
 async def create_new_mode(call: CallbackQuery, state: FSMContext):
-    usdt_amount = 200
-    req = await find_req(usdt_amount)
+    req, usdt_amount = await get_req_with_fallback()
     if not req:
-        usdt_amount = 100
-        req = await find_req(usdt_amount)
-    if req:
-        text = f"Реквизиты меняются каждые ${usdt_amount}\n❗️ Не выходите из режима пока не отправите все чеки!\n\n🟢 Режим активирован, ожидаются чеки..\n\n"
-        text2 = (f"{req.name}\n"
-                 f"{req.country.flag} {req.cart}\n\n")
-        if req.bez_kaspi:
-            text2 += "Нельзя с Каспи\n"
-        if req.kaspi:
-            text2 += "Можно с каспи\n"
-        if req.qiwi:
-            text2 += "Оплата с киви\n"
-        if req.terminal:
-            text2 += "Оплата с терминала\n"
-        other_reqs = await sync_to_async(Req.objects.filter)(
-            user=req.user, active=True, archived=False
-        )
-        other_reqs = [r for r in other_reqs if r.id != req.id]  # исключаем основной
-
-        if other_reqs:
-            text2 += "\n🔁 Дополнительные реквизиты:\n"
-            for r in other_reqs:
-                text2 += f"\n{r.name}\n{r.country.flag} {r.cart}\n"
-                if r.kaspi:
-                    text2 += "Можно с Каспи\n"
-                if r.bez_kaspi:
-                    text2 += "Нельзя с Каспи\n"
-                if r.qiwi:
-                    text2 += "Оплата с киви\n"
-                if r.terminal:
-                    text2 += "Оплата с терминала\n"
-        shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
-                                                    keyboard=[
-                                                        [KeyboardButton(text="Выйти из режима")],
-                                                    ])
-        user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
-        shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
-        if shop_operator:
-            shop_operator = shop_operator.first()
-            new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount, shop=shop_operator.shop)
-            await state.update_data(mode_id=new_operator_mode.id, shop_id=shop_operator.shop.id, req_id=req.id)
-            await state.set_state(OperatorModeState.in_mode)
-            await call.message.answer(text, reply_markup=shop_operator_bottoms)
-            await call.message.answer(text2)
-        else:
-            shop = await sync_to_async(Shop.objects.filter)(boss=user)
-            if shop:
-                shop = shop.first()
-                new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount, shop=shop)
-                await state.update_data(mode_id=new_operator_mode.id, shop_id=shop.id, req_id=req.id)
-                await state.set_state(OperatorModeState.in_mode)
-                await call.message.answer(text, reply_markup=shop_operator_bottoms)
-                await call.message.answer(text2)
-    else:
         await call.message.answer("no req")
+        return
+
+    text = (
+        f"Реквизиты меняются каждые ${usdt_amount}\n"
+        f"❗️ Не выходите из режима пока не отправите все чеки!\n\n"
+        f"🟢 Режим активирован, ожидаются чеки..\n\n"
+    )
+    text2 = format_req_info(req)
+
+    other_reqs_qs = await sync_to_async(Req.objects.filter)(user=req.user, active=True, archived=False)
+    other_reqs = [r for r in other_reqs_qs if r.id != req.id]
+
+    categories = {'kaspi': None,'bez_kaspi': None,'qiwi': None,'terminal': None}
+
+    for r in other_reqs:
+        if r.kaspi and not categories['kaspi']:
+            categories['kaspi'] = r
+        if r.bez_kaspi and not categories['bez_kaspi']:
+            categories['bez_kaspi'] = r
+        if r.qiwi and not categories['qiwi']:
+            categories['qiwi'] = r
+        if r.terminal and not categories['terminal']:
+            categories['terminal'] = r
+
+    filtered_reqs = [r for r in categories.values() if r]
+    if filtered_reqs:
+        text2 += "\n🔁 Дополнительные реквизиты:\n"
+        for r in filtered_reqs:
+            text2 += "\n" + format_req_info(r)
+
+    shop_operator_bottoms = ReplyKeyboardMarkup(resize_keyboard=True,
+                                                keyboard=[[KeyboardButton(text="Выйти из режима")]])
+
+    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    shop_operator_qs = await sync_to_async(ShopOperator.objects.filter)(operator=user, active=True)
+    shop = None
+
+    if shop_operator_qs:
+        shop_operator = shop_operator_qs.first()
+        shop = shop_operator.shop
+    else:
+        shop_qs = await sync_to_async(Shop.objects.filter)(boss=user)
+        if shop_qs:
+            shop = shop_qs.first()
+    if shop:
+        new_operator_mode = await sync_to_async(OperatorMode.objects.create)(req=req, max_amount=usdt_amount, shop=shop)
+        await state.update_data(mode_id=new_operator_mode.id,shop_id=shop.id,req_id=req.id,)
+        await state.set_state(OperatorModeState.in_mode)
+        await call.message.answer(text, reply_markup=shop_operator_bottoms)
+        await call.message.answer(text2)
+
 
 
 @router.message(OperatorModeState.in_mode)
@@ -286,7 +284,7 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
 
             builder.add(InlineKeyboardButton(text=f"Указать сумму {short_name} *{last_digits}",
                                              callback_data=f"in_mode_accept_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
-            builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}_{check_msg.chat.id}_{check_msg.message_id}_{operator_mode.id}"))
+            builder.add(InlineKeyboardButton(text="❌", callback_data=f"decline_invoice_{new_invoice.id}"))
             builder.adjust(1)
 
             if msg.photo:
@@ -301,3 +299,4 @@ async def in_mode(msg: Message, state: FSMContext, bot: Bot):
             new_usage = await sync_to_async(ReqUsage.objects.create)(usage_inv=new_invoice,
                                                                      status="in_operator_mode", usage_req=req,
                                                                      photo=file_id)
+            asyncio.create_task(accept_checker_in_mode(check_msg, new_usage))

@@ -37,6 +37,7 @@ class TGUser(models.Model):
 class Shop(models.Model):
     name = models.CharField(max_length=255, null=True, blank=True)
     crypto_req = models.CharField(max_length=2555, null=True, blank=True)
+    chat_id = models.CharField(max_length=255, null=True, blank=True)
     boss = models.ForeignKey(TGUser, on_delete=models.SET_NULL, null=True, blank=True)
     prc = models.FloatField(default=13.5, null=True, blank=True)
 

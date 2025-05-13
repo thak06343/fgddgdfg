@@ -5,8 +5,8 @@ from aiogram.types import Message, InlineKeyboardButton, CallbackQuery, Reaction
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.filters import Filter, Command
 from asgiref.sync import sync_to_async
-from .utils import get_ltc_usd_rate, admin_balance, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val, \
-    changers_current_balance, IsLtcReq, changers_currents_balance, shop_balances, sheff_balance
+from .utils import get_ltc_usd_rate, transfer_to_admin, PAGE_SIZE, shop_balance, balance_val, \
+    changers_current_balance, IsLtcReq, sheff_balance
 from ..models import TGUser, Invoice, Country, Req, WithdrawalMode, Promo, Shop, ReqUsage
 from ..text import admin_invoice_text
 
@@ -322,7 +322,7 @@ async def admin_all_shops(call: CallbackQuery):
     shops = await sync_to_async(Shop.objects.all)()
     builder = InlineKeyboardBuilder()
     for shop in shops:
-        builder.add(InlineKeyboardButton(text=f"{shop.name}", callback_data=f"admin_show_shop_invoices_{shop.id}"))
+        builder.add(InlineKeyboardButton(text=f"{shop.name} {shop.id}", callback_data=f"admin_show_shop_invoices_{shop.id}"))
     builder.adjust(2)
     builder.row(InlineKeyboardButton(text="< Назад", callback_data="back_to_invoices"))
     await call.message.edit_reply_markup(reply_markup=builder.as_markup())
