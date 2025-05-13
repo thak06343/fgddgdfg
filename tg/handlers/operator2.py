@@ -36,10 +36,16 @@ router.message.filter(IsOperFilter())
 async def shop_operator_invoices(msg: Message):
     user = await sync_to_async(TGUser.objects.get)(user_id=msg.from_user.id)
     shop_operator = await sync_to_async(ShopOperator.objects.filter)(operator=user)
-    shop_operator = shop_operator.first()
+    if shop_operator:
+        shop_operator = shop_operator.first()
+        shop = shop_operator.shop
+    else:
+        shop = await sync_to_async(Shop.objects.filter)(boss=user)
+        if shop:
+            shop = shop.first()
     builder = InlineKeyboardBuilder()
     builder.add(InlineKeyboardButton(text="Все Инвойсы", callback_data="shop_operator_all_invoices"))
-    await msg.answer(f"`{shop_operator.shop.name.upper()}`", reply_markup=builder.as_markup())
+    await msg.answer(f"`{shop.name.upper() if shop.name else 'Магазин'}`", reply_markup=builder.as_markup(), parse_mode="Markdown")
 
 @sync_to_async
 def get_invoices_for_operator(operator, offset, limit):
