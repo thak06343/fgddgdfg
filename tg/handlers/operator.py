@@ -275,7 +275,7 @@ async def changer_settings(msg: Message, bot: Bot):
                     f"   🌐 {hbold('ФИАТ')}: {hcode(round(total_fiat, 2))}\n"
                     f"   💵 {hbold('USDT')}: {hcode(round(total_usdt, 2))}\n\n"
                 )
-                builder.add(InlineKeyboardButton(text=f'{short_name} *{last_digits} (${round(total_usdt, 2)})', callback_data=f"send_to_bank_{req.id}"))
+                # builder.add(InlineKeyboardButton(text=f'{short_name} *{last_digits} (${round(total_usdt, 2)})', callback_data=f"send_to_bank_{req.id}"))
         builder.adjust(2)
         builder.row(InlineKeyboardButton(text=f"🔄 Завершить круг по всем 💳 ${round(total_usd, 2)}", callback_data=f"close_all_reqs"))
         builder.adjust(1)
@@ -359,45 +359,46 @@ async def close_all_reqs(call: CallbackQuery, bot: Bot):
 
 @router.callback_query(F.data.startswith("send_to_bank_"))
 async def send_to_bank_req(call: CallbackQuery, bot: Bot):
-    user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
-    data = call.data.split("_")
-    req_id = data[3]
-    req = await sync_to_async(Req.objects.get)(id=req_id)
-
-    total_amount_val, invoice_list = await sync_to_async(lambda: (
-        Invoice.objects.filter(accepted=True, sent_bank=False, req=req)
-        .aggregate(total=Coalesce(Sum('amount_in_usdt_for_changer'), 0.0, output_field=FloatField()))['total'],
-        list(Invoice.objects.filter(accepted=True, sent_bank=False, req__user=user))
-    ))()
-    if total_amount_val and invoice_list:
-        try:
-            active_wm = await sync_to_async(WithdrawalMode.objects.filter)(user=user, active=True)
-            if active_wm:
-                return
-        except Exception as e:
-            print(e)
-
-        invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
-
-        invoice_id = invoice_info['invoice']
-        ltc_address = invoice_info['address']
-        expire = invoice_info['expire']
-        pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
-                                                                  ltc_amount=ltc_amount)
-        await sync_to_async(pack.invoices.add)(*invoice_list)
-        iso_expire_time = expire
-        dt = datetime.fromisoformat(iso_expire_time)
-        formatted_time = dt.strftime("%d %B %Y, %H:%M")
-        message = (
-            f"🧾 <b>Заявка №{pack.id}</b>\n\n"
-            f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
-            f"🪙 Сумма в LTC: <b>{ltc_amount:.7f} LTC</b>\n\n"
-            f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
-            f"⏳ Действителен до: <b>{formatted_time}</b>\n"
-        )
-
-        asyncio.create_task(check_invoice(pack.id, invoice_id, bot))
-        await call.message.answer(message, parse_mode="HTML")
+    await call.answer("Кнопка не доступна")
+    # user = await sync_to_async(TGUser.objects.get)(user_id=call.from_user.id)
+    # data = call.data.split("_")
+    # req_id = data[3]
+    # req = await sync_to_async(Req.objects.get)(id=req_id)
+    #
+    # total_amount_val, invoice_list = await sync_to_async(lambda: (
+    #     Invoice.objects.filter(accepted=True, sent_bank=False, req=req)
+    #     .aggregate(total=Coalesce(Sum('amount_in_usdt_for_changer'), 0.0, output_field=FloatField()))['total'],
+    #     list(Invoice.objects.filter(accepted=True, sent_bank=False, req__user=user))
+    # ))()
+    # if total_amount_val and invoice_list:
+    #     try:
+    #         active_wm = await sync_to_async(WithdrawalMode.objects.filter)(user=user, active=True)
+    #         if active_wm:
+    #             return
+    #     except Exception as e:
+    #         print(e)
+    #
+    #     invoice_info, ltc_amount = await create_ltc_invoice(total_amount_val)
+    #
+    #     invoice_id = invoice_info['invoice']
+    #     ltc_address = invoice_info['address']
+    #     expire = invoice_info['expire']
+    #     pack = await sync_to_async(WithdrawalMode.objects.create)(user=user, active=True, requisite=ltc_address,
+    #                                                               ltc_amount=ltc_amount)
+    #     await sync_to_async(pack.invoices.add)(*invoice_list)
+    #     iso_expire_time = expire
+    #     dt = datetime.fromisoformat(iso_expire_time)
+    #     formatted_time = dt.strftime("%d %B %Y, %H:%M")
+    #     message = (
+    #         f"🧾 <b>Заявка №{pack.id}</b>\n\n"
+    #         f"💵 Сумма в USD: <b>{round(total_amount_val, 2)} $</b>\n"
+    #         f"🪙 Сумма в LTC: <b>{ltc_amount:.7f} LTC</b>\n\n"
+    #         f"📬 Адрес для перевода:\n<code>{ltc_address}</code>\n\n"
+    #         f"⏳ Действителен до: <b>{formatted_time}</b>\n"
+    #     )
+    #
+    #     asyncio.create_task(check_invoice(pack.id, invoice_id, bot))
+    #     await call.message.answer(message, parse_mode="HTML")
 
 @router.message(F.text == "⚙️ Настройки")
 async def changer_settings(msg: Message):
